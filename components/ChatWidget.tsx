@@ -36,10 +36,10 @@ export const ChatWidget: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-20 right-4 md:bottom-8 md:right-8 z-[100] flex flex-col items-end print:hidden">
         {/* Chat Window */}
         {isOpen && (
-            <div className="bg-white w-[90vw] md:w-96 h-[500px] rounded-2xl shadow-2xl mb-4 flex flex-col overflow-hidden animate-fade-in border border-uh-cream">
+            <div className="bg-white w-[90vw] md:w-96 h-[500px] rounded-2xl shadow-2xl mb-4 flex flex-col overflow-hidden animate-fade-in border border-uh-cream ring-1 ring-black/5">
                 {/* Header */}
                 <div className="bg-uh-dark p-4 flex justify-between items-center text-white">
                     <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export const ChatWidget: React.FC = () => {
         {/* Toggle Button */}
         <button 
             onClick={toggleOpen}
-            className="bg-uh-dark text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform group flex items-center gap-2"
+            className="bg-uh-dark text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-transform group flex items-center gap-2 border-2 border-uh-gold"
         >
             {isOpen ? <X size={24} /> : <MessageSquare size={24} className="text-uh-gold" />}
             {!isOpen && <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap pr-0 group-hover:pr-2 font-bold text-sm">محادثة</span>}

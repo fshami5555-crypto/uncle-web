@@ -165,23 +165,26 @@ const App: React.FC = () => {
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // If Admin, render Dashboard without Layout wrapper (full screen dashboard), or inside layout if preferred.
+  // If Admin, render Dashboard without Layout wrapper (full screen dashboard)
   if (currentView === 'ADMIN') {
       return renderView();
   }
 
+  // Regular View
   return (
-    <Layout 
-        setView={setCurrentView} 
-        currentView={currentView} 
-        isLoggedIn={user.hasProfile} 
-        onLogout={handleLogout}
-        cartItemCount={cartItemCount}
-    >
-      {renderView()}
-      {/* Floating Chat Widget - Visible on all client pages */}
+    <>
+      <Layout 
+          setView={setCurrentView} 
+          currentView={currentView} 
+          isLoggedIn={user.hasProfile} 
+          onLogout={handleLogout}
+          cartItemCount={cartItemCount}
+      >
+        {renderView()}
+      </Layout>
+      {/* ChatWidget outside Layout to ensure fixed positioning works correctly relative to viewport */}
       <ChatWidget />
-    </Layout>
+    </>
   );
 };
 

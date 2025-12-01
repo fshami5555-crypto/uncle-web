@@ -83,47 +83,47 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow container mx-auto px-4 py-6 w-full">
+      <main className="flex-grow container mx-auto px-4 py-6 w-full relative">
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="bg-uh-dark text-white pt-12 pb-24 md:pb-6 mt-12 w-full">
+      <footer className="bg-uh-dark text-white pt-8 pb-20 md:pb-6 mt-8 w-full">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8 border-b border-white/10 pb-8 text-center md:text-right">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6 border-b border-white/10 pb-6 text-center md:text-right">
              <div>
-                <img src="https://i.ibb.co/nqmV5jzX/23.png" alt="Logo" className="h-16 mb-4 opacity-90 bg-white rounded p-1 inline-block" />
+                <img src="https://i.ibb.co/nqmV5jzX/23.png" alt="Logo" className="h-14 mb-3 opacity-90 bg-white rounded p-1 inline-block" />
                 <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto md:mx-0">انكل هيلثي، رفيقك في رحلة الحياة الصحية.</p>
-                <div className="flex justify-center md:justify-start gap-4 mt-6">
-                    {content?.socialFacebook && <a href={content.socialFacebook} target="_blank" rel="noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-uh-gold transition"><Facebook size={20} /></a>}
-                    {content?.socialInstagram && <a href={content.socialInstagram} target="_blank" rel="noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-uh-gold transition"><Instagram size={20} /></a>}
+                <div className="flex justify-center md:justify-start gap-4 mt-4">
+                    {content?.socialFacebook && <a href={content.socialFacebook} target="_blank" rel="noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-uh-gold transition"><Facebook size={18} /></a>}
+                    {content?.socialInstagram && <a href={content.socialInstagram} target="_blank" rel="noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-uh-gold transition"><Instagram size={18} /></a>}
                 </div>
              </div>
              <div>
-                <h3 className="font-bold text-lg mb-4 text-uh-gold">روابط سريعة</h3>
-                <ul className="space-y-2 text-gray-300">
+                <h3 className="font-bold text-lg mb-3 text-uh-gold">روابط سريعة</h3>
+                <ul className="space-y-2 text-gray-300 text-sm">
                     <li><button onClick={() => setView('STORE')} className="hover:text-white transition">المتجر</button></li>
                     <li><button onClick={() => setView('SUBSCRIPTION')} className="hover:text-white transition">الاشتراكات</button></li>
                     <li><button onClick={() => setView('PROFILE')} className="hover:text-white transition">حسابي</button></li>
                 </ul>
              </div>
              <div>
-                <h3 className="font-bold text-lg mb-4 text-uh-gold">معلومات هامة</h3>
-                <ul className="space-y-2 text-gray-300 mb-6">
+                <h3 className="font-bold text-lg mb-3 text-uh-gold">معلومات هامة</h3>
+                <ul className="space-y-2 text-gray-300 text-sm mb-4">
                     <li><button onClick={() => setView('PRIVACY_POLICY')} className="hover:text-white transition">سياسة الاستخدام والخصوصية</button></li>
                     <li><button onClick={() => setView('RETURN_POLICY')} className="hover:text-white transition">سياسة الإرجاع</button></li>
                 </ul>
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-3 border-t border-white/10">
                      <p className="text-xs text-gray-400 mb-2">حمل التطبيق الآن</p>
                      {renderAppButtons(true)}
                 </div>
              </div>
           </div>
-          <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
+          <div className="flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
              <p>جميع الحقوق محفوظة © Uncle Healthy 2025</p>
              <div className="flex items-center gap-1 mt-2 md:mt-0 opacity-80 hover:opacity-100 transition">
                 <span>تم التصميم بحب</span>
-                <Heart size={12} className="text-red-500 fill-red-500 animate-pulse" />
+                <Heart size={10} className="text-red-500 fill-red-500 animate-pulse" />
              </div>
           </div>
         </div>
