@@ -46,11 +46,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setLoading(true);
 
     try {
-      // Fetch key dynamically
-      const content = await dataService.getContent();
-      const apiKey = content.geminiApiKey || process.env.API_KEY || '';
-      
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const chat = ai.chats.create({
         model: "gemini-2.5-flash",
         config: {

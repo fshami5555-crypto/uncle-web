@@ -3,22 +3,6 @@ import { Meal, UserProfile, DailyPlan } from '../types';
 import { MEALS } from '../constants';
 import { dataService } from './dataService';
 
-// Helper to get fresh instance with current key
-const getAI = async () => {
-    // 1. Try fetching from Database (Admin Panel Config)
-    const content = await dataService.getContent();
-    const dbKey = content.geminiApiKey;
-
-    // 2. Fallback to Env Variable, then throw if both missing
-    const apiKey = dbKey || process.env.API_KEY;
-    
-    if (!apiKey) {
-        console.error("API Key Missing in both DB and Environment");
-        throw new Error("API Key Missing");
-    }
-    return new GoogleGenAI({ apiKey });
-};
-
 export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]> => {
   // Now async
   const currentMeals = await dataService.getMeals();
@@ -53,7 +37,7 @@ export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]
   `;
 
   try {
-    const ai = await getAI();
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -119,7 +103,7 @@ export const chatWithNutritionist = async (history: {role: string, text: string}
     `;
 
     try {
-      const ai = await getAI();
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const chat = ai.chats.create({
         model: "gemini-2.5-flash",
         config: { systemInstruction }

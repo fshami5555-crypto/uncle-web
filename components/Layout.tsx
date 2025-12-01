@@ -27,27 +27,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
 
   // Helper to render App Buttons
   const renderAppButtons = (isFooter = false) => {
-      // Adjusted height slightly to ensure visibility and button-like feel
       const imgClass = "h-12 w-auto object-contain transition hover:scale-105 cursor-pointer";
-        
       return (
         <div className={`flex items-center gap-3 ${isFooter ? 'justify-center md:justify-start' : 'hidden lg:flex'}`}>
             {content?.linkAndroid && (
                 <a href={content.linkAndroid} target="_blank" rel="noreferrer">
-                    <img 
-                        src="https://i.ibb.co/hJnCvx8F/play.png" 
-                        alt="Get it on Google Play" 
-                        className={imgClass}
-                    />
+                    <img src="https://i.ibb.co/hJnCvx8F/play.png" alt="Get it on Google Play" className={imgClass} />
                 </a>
             )}
             {content?.linkIOS && (
                 <a href={content.linkIOS} target="_blank" rel="noreferrer">
-                    <img 
-                        src="https://i.ibb.co/0RTdQBk3/play-1.png" 
-                        alt="Download on the App Store" 
-                        className={imgClass}
-                    />
+                    <img src="https://i.ibb.co/0RTdQBk3/play-1.png" alt="Download on the App Store" className={imgClass} />
                 </a>
             )}
         </div>
@@ -72,35 +62,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
           </nav>
 
           <div className="flex items-center gap-4">
-             {/* App Buttons (Desktop Header) */}
              {renderAppButtons()}
-
-             {/* Cart Icon */}
              <button onClick={() => setView('CART')} className="relative p-2 text-uh-dark hover:text-uh-green transition">
                 <ShoppingBag size={24} />
                 {cartItemCount > 0 && (
-                    <span className="absolute top-0 right-0 bg-uh-gold text-uh-dark text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
-                        {cartItemCount}
-                    </span>
+                    <span className="absolute top-0 right-0 bg-uh-gold text-uh-dark text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">{cartItemCount}</span>
                 )}
              </button>
-
-             {/* Auth Button */}
              {isLoggedIn ? (
-                 <button 
-                    onClick={onLogout} 
-                    className="flex items-center gap-2 text-sm font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-2 rounded-lg transition"
-                 >
-                    <LogOut size={18} />
-                    <span className="hidden md:inline">خروج</span>
+                 <button onClick={onLogout} className="flex items-center gap-2 text-sm font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-2 rounded-lg transition">
+                    <LogOut size={18} /> <span className="hidden md:inline">خروج</span>
                  </button>
              ) : (
-                 <button 
-                    onClick={() => setView('LOGIN')} 
-                    className="flex items-center gap-2 text-sm font-bold text-white bg-uh-green hover:bg-uh-greenDark px-4 py-2 rounded-lg transition shadow-sm"
-                 >
-                    <LogIn size={18} />
-                    <span>دخول</span>
+                 <button onClick={() => setView('LOGIN')} className="flex items-center gap-2 text-sm font-bold text-white bg-uh-green hover:bg-uh-greenDark px-4 py-2 rounded-lg transition shadow-sm">
+                    <LogIn size={18} /> <span>دخول</span>
                  </button>
              )}
           </div>
@@ -108,43 +83,22 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow container mx-auto px-4 py-6 pb-24 md:pb-6">
+      <main className="flex-grow container mx-auto px-4 py-6 w-full">
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="bg-uh-dark text-white pt-12 pb-6 mt-12 hidden md:block">
+      <footer className="bg-uh-dark text-white pt-12 pb-24 md:pb-6 mt-12 w-full">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8 border-b border-white/10 pb-8 text-center md:text-right">
-             
-             {/* Logo & Description */}
              <div>
                 <img src="https://i.ibb.co/nqmV5jzX/23.png" alt="Logo" className="h-16 mb-4 opacity-90 bg-white rounded p-1 inline-block" />
-                <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto md:mx-0">
-                  انكل هيلثي، رفيقك في رحلة الحياة الصحية. وجبات مدروسة، طعم فاخر، ونتائج حقيقية.
-                </p>
-                
-                {/* Social Media */}
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto md:mx-0">انكل هيلثي، رفيقك في رحلة الحياة الصحية.</p>
                 <div className="flex justify-center md:justify-start gap-4 mt-6">
-                    {content?.socialFacebook && (
-                      <a href={content.socialFacebook} target="_blank" rel="noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-uh-gold hover:text-uh-dark transition">
-                          <Facebook size={20} />
-                      </a>
-                    )}
-                    {content?.socialInstagram && (
-                      <a href={content.socialInstagram} target="_blank" rel="noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-uh-gold hover:text-uh-dark transition">
-                          <Instagram size={20} />
-                      </a>
-                    )}
-                    {content?.socialTwitter && (
-                      <a href={content.socialTwitter} target="_blank" rel="noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-uh-gold hover:text-uh-dark transition">
-                          <Twitter size={20} />
-                      </a>
-                    )}
+                    {content?.socialFacebook && <a href={content.socialFacebook} target="_blank" rel="noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-uh-gold transition"><Facebook size={20} /></a>}
+                    {content?.socialInstagram && <a href={content.socialInstagram} target="_blank" rel="noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-uh-gold transition"><Instagram size={20} /></a>}
                 </div>
              </div>
-
-             {/* Links 1 */}
              <div>
                 <h3 className="font-bold text-lg mb-4 text-uh-gold">روابط سريعة</h3>
                 <ul className="space-y-2 text-gray-300">
@@ -153,38 +107,30 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
                     <li><button onClick={() => setView('PROFILE')} className="hover:text-white transition">حسابي</button></li>
                 </ul>
              </div>
-
-             {/* Links 2 (Policies & App) */}
              <div>
                 <h3 className="font-bold text-lg mb-4 text-uh-gold">معلومات هامة</h3>
                 <ul className="space-y-2 text-gray-300 mb-6">
                     <li><button onClick={() => setView('PRIVACY_POLICY')} className="hover:text-white transition">سياسة الاستخدام والخصوصية</button></li>
                     <li><button onClick={() => setView('RETURN_POLICY')} className="hover:text-white transition">سياسة الإرجاع</button></li>
-                    <li><button onClick={() => setView('PAYMENT_POLICY')} className="hover:text-white transition">نظام الدفع</button></li>
                 </ul>
-                
-                {/* App Buttons (Footer) */}
                 <div className="pt-4 border-t border-white/10">
                      <p className="text-xs text-gray-400 mb-2">حمل التطبيق الآن</p>
                      {renderAppButtons(true)}
                 </div>
              </div>
           </div>
-
           <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
              <p>جميع الحقوق محفوظة © Uncle Healthy 2025</p>
-             <div className="flex items-center gap-1 mt-2 md:mt-0 font-body text-uh-cream opacity-80 hover:opacity-100 transition">
+             <div className="flex items-center gap-1 mt-2 md:mt-0 opacity-80 hover:opacity-100 transition">
                 <span>تم التصميم بحب</span>
                 <Heart size={12} className="text-red-500 fill-red-500 animate-pulse" />
-                <span>بواسطة</span>
-                <span className="font-bold text-uh-gold">Bloovi tech</span>
              </div>
           </div>
         </div>
       </footer>
 
       {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 w-full bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] flex justify-around py-3 z-50 text-xs">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] flex justify-around py-3 z-50 text-xs border-t border-gray-100">
          <div onClick={() => setView('HOME')} className={navItemClass('HOME')}>
             <Home size={20} />
             <span>الرئيسية</span>
