@@ -77,7 +77,9 @@ export const dataService = {
         ],
 
         // Config
-        geminiApiKey: 'AIzaSyDnvOjiEVF5x-UGtMnEU8cuj-R8f8K_wUI',
+        // Note: The API Key has been removed from source code to prevent build errors.
+        // Please add the key via the Admin Dashboard > Policies Tab > AI Configuration.
+        geminiApiKey: '',
 
         // App Banner Defaults
         appBannerTitle1: 'صحتك صارت',
