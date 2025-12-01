@@ -1,3 +1,4 @@
+
 export interface Meal {
   id: string;
   name: string;
@@ -40,14 +41,34 @@ export enum DeliverySlot {
   EVENING = '15:00 - 17:00'
 }
 
+export interface SubscriptionPlan {
+  id: string;
+  title: string;
+  price: number;
+  features: string[];
+  durationLabel: string; // e.g., "Weekly", "Monthly", "VIP"
+  isPopular?: boolean;
+}
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  type: 'MEALS' | 'SUBSCRIPTION'; // Where it can be used
+  discountAmount: number; // Value
+  isPercentage: boolean; // True for %, False for Fixed Amount
+  isActive: boolean;
+}
+
 export interface Subscription {
   id?: string;
-  duration: SubscriptionDuration;
+  duration: string; // Changed from enum to string to support dynamic plans
   deliverySlot: DeliverySlot;
   address: string;
   phone: string;
   user?: UserProfile;
   date: string;
+  planTitle?: string; // To store snapshot of plan name
+  pricePaid?: number; // To store snapshot of price
 }
 
 export interface DailyPlan {
@@ -70,6 +91,8 @@ export interface Order {
   phone: string;
   date: string;
   status: 'pending' | 'completed' | 'cancelled';
+  promoCode?: string;
+  discountApplied?: number;
 }
 
 export interface SiteContent {
@@ -78,6 +101,14 @@ export interface SiteContent {
   heroImage: string;
   missionTitle: string;
   missionText: string;
+  featuresList: string[]; // Added: List of "Why Us" features
+  // Gemini Configuration
+  geminiApiKey?: string;
+  // App Banner Section
+  appBannerTitle1?: string; // "صحتك صارت"
+  appBannerHighlight?: string; // "أسهل وأقرب"
+  appBannerText?: string;
+  appBannerImage?: string; // The screen image
   // Policies
   privacyPolicy: string;
   returnPolicy: string;
@@ -86,6 +117,9 @@ export interface SiteContent {
   socialFacebook: string;
   socialInstagram: string;
   socialTwitter: string;
+  // App Links
+  linkAndroid: string;
+  linkIOS: string;
 }
 
 export type PageView = 'HOME' | 'LOGIN' | 'ONBOARDING' | 'STORE' | 'PROFILE' | 'SUBSCRIPTION' | 'MEAL_DETAIL' | 'CART' | 'ADMIN' | 'PRIVACY_POLICY' | 'RETURN_POLICY' | 'PAYMENT_POLICY';

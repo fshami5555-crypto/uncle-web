@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { Home } from './components/Home';
 import { Onboarding } from './components/Onboarding';
@@ -11,8 +11,8 @@ import { Cart } from './components/Cart';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ChatWidget } from './components/ChatWidget';
 import { StaticPage } from './components/StaticPage';
-import { UserProfile, PageView, Meal, CartItem } from './types';
-import { INITIAL_USER_PROFILE, MEALS } from './constants';
+import { UserProfile, PageView, Meal, CartItem, SiteContent } from './types';
+import { INITIAL_USER_PROFILE } from './constants';
 import { dataService } from './services/dataService';
 
 const App: React.FC = () => {
@@ -20,6 +20,21 @@ const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile>(INITIAL_USER_PROFILE);
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [content, setContent] = useState<SiteContent | null>(null);
+
+  // Fetch content on mount
+  useEffect(() => {
+    const fetchContent = async () => {
+        const c = await dataService.getContent();
+        setContent(c);
+    };
+    fetchContent();
+  }, []);
+
+  // Reset scroll on view change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentView]);
 
   // Auth Handlers
   const handleLogin = (loggedInUser: UserProfile) => {
@@ -73,8 +88,8 @@ const App: React.FC = () => {
   };
 
   // Navigation Handlers
-  const handleMealClick = (mealId: string) => {
-    const allMeals = dataService.getMeals(); // Get latest from service
+  const handleMealClick = async (mealId: string) => {
+    const allMeals = await dataService.getMeals(); // Get latest from service (async)
     const meal = allMeals.find(m => m.id === mealId);
     if (meal) {
       setSelectedMeal(meal);
@@ -83,7 +98,14 @@ const App: React.FC = () => {
   };
 
   const renderView = () => {
-    const content = dataService.getContent();
+    // If content hasn't loaded yet, we can show a loader or fallback
+    // But StaticPage handles inputs, so if null, we just pass defaults inside logic or ensure content is not null
+    const safeContent = content || {
+        privacyPolicy: '',
+        returnPolicy: '',
+        paymentPolicy: '',
+        heroTitle: '', heroSubtitle: '', heroImage: '', missionTitle: '', missionText: '', socialFacebook: '', socialInstagram: '', socialTwitter: ''
+    };
 
     switch (currentView) {
       case 'HOME':
@@ -127,11 +149,11 @@ const App: React.FC = () => {
       
       // Legal Pages
       case 'PRIVACY_POLICY':
-        return <StaticPage title="سياسة الاستخدام والخصوصية" content={content.privacyPolicy} type="PRIVACY" onBack={() => setCurrentView('HOME')} />;
+        return <StaticPage title="سياسة الاستخدام والخصوصية" content={safeContent.privacyPolicy} type="PRIVACY" onBack={() => setCurrentView('HOME')} />;
       case 'RETURN_POLICY':
-        return <StaticPage title="سياسة الإرجاع" content={content.returnPolicy} type="RETURN" onBack={() => setCurrentView('HOME')} />;
+        return <StaticPage title="سياسة الإرجاع" content={safeContent.returnPolicy} type="RETURN" onBack={() => setCurrentView('HOME')} />;
       case 'PAYMENT_POLICY':
-        return <StaticPage title="نظام الدفع" content={content.paymentPolicy} type="PAYMENT" onBack={() => setCurrentView('HOME')} />;
+        return <StaticPage title="نظام الدفع" content={safeContent.paymentPolicy} type="PAYMENT" onBack={() => setCurrentView('HOME')} />;
 
       case 'ADMIN':
         if (!user.isAdmin) return <Home onStart={() => setCurrentView('LOGIN')} />;

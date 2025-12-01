@@ -4,14 +4,24 @@ import { MEALS } from '../constants';
 import { dataService } from './dataService';
 
 // Helper to get fresh instance with current key
-const getAI = () => {
-    const apiKey = dataService.getApiKey() || process.env.API_KEY;
-    if (!apiKey) throw new Error("API Key Missing");
+const getAI = async () => {
+    // 1. Try fetching from Database (Admin Panel Config)
+    const content = await dataService.getContent();
+    const dbKey = content.geminiApiKey;
+
+    // 2. Fallback to Env Variable, then throw if both missing
+    const apiKey = dbKey || process.env.API_KEY;
+    
+    if (!apiKey) {
+        console.error("API Key Missing in both DB and Environment");
+        throw new Error("API Key Missing");
+    }
     return new GoogleGenAI({ apiKey });
 };
 
 export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]> => {
-  const currentMeals = dataService.getMeals();
+  // Now async
+  const currentMeals = await dataService.getMeals();
   const mealList = currentMeals.map(m => `${m.id}: ${m.name} (${m.macros.calories}kcal)`).join(', ');
 
   const prompt = `
@@ -43,7 +53,7 @@ export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]
   `;
 
   try {
-    const ai = getAI();
+    const ai = await getAI();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -67,7 +77,6 @@ export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]
     const rawData = JSON.parse(response.text || '[]');
     
     // Map IDs back to full meal objects
-    // We use currentMeals here to ensure we use up-to-date data including admin added meals
     const finalPlan: DailyPlan[] = rawData.map((day: any) => ({
       day: day.day,
       breakfast: currentMeals.find(m => m.id === day.breakfastId) || currentMeals[0],
@@ -90,7 +99,8 @@ export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]
 };
 
 export const chatWithNutritionist = async (history: {role: string, text: string}[], newMessage: string) => {
-    const currentMeals = dataService.getMeals();
+    // Now async
+    const currentMeals = await dataService.getMeals();
     const menuContext = currentMeals.map(m => `- ${m.name}: ${m.description} (${m.macros.calories} Cal, ${m.macros.protein}g Protein). Price: ${m.price}`).join('\n');
 
     const systemInstruction = `
@@ -109,18 +119,11 @@ export const chatWithNutritionist = async (history: {role: string, text: string}
     `;
 
     try {
-      const ai = getAI();
+      const ai = await getAI();
       const chat = ai.chats.create({
         model: "gemini-2.5-flash",
         config: { systemInstruction }
       });
-      
-      // We are sending just the new message for this stateless implementation, 
-      // but in a real app you might want to reconstruct history. 
-      // For this simplified chat widget, we assume single-turn context or the user provides context.
-      // However, to make it better, let's include the last few messages in the prompt if possible,
-      // but creating a new chat instance resets history. 
-      // The best way here without persistent chat object is to rely on the user's latest input + system instruction.
       
       const response = await chat.sendMessage({ message: newMessage });
       return response.text;

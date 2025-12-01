@@ -10,10 +10,17 @@ interface StoreProps {
 
 export const Store: React.FC<StoreProps> = ({ onMealClick, onAddToCart }) => {
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-      setMeals(dataService.getMeals());
+    const fetch = async () => {
+      setMeals(await dataService.getMeals());
+      setLoading(false);
+    };
+    fetch();
   }, []);
+
+  if (loading) return <div className="text-center py-20">جاري تحميل القائمة...</div>;
 
   return (
     <div className="space-y-8 animate-fade-in">

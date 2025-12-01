@@ -1,49 +1,66 @@
-import { Order, Subscription, SiteContent, Meal } from '../types';
+import { Order, Subscription, SiteContent, Meal, SubscriptionPlan, PromoCode } from '../types';
 import { MEALS } from '../constants';
-
-const ORDERS_KEY = 'uh_orders';
-const SUBS_KEY = 'uh_subscriptions';
-const CONTENT_KEY = 'uh_content';
-const MEALS_KEY = 'uh_meals';
-const API_KEY_STORAGE = 'uh_api_key';
-
-// Default provided key as fallback
-const DEFAULT_API_KEY = 'AIzaSyA9Mik-C-2DwTZ90IRZ-9YhBLB-YoR5zFE'; 
+import { db } from './firebase';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
 export const dataService = {
   // Orders
-  getOrders: (): Order[] => {
-    const data = localStorage.getItem(ORDERS_KEY);
-    return data ? JSON.parse(data) : [];
+  getOrders: async (): Promise<Order[]> => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "orders"));
+      const orders: Order[] = [];
+      querySnapshot.forEach((doc) => {
+        orders.push(doc.data() as Order);
+      });
+      // Sort manually since we fetched all (newest first)
+      return orders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    } catch (e) {
+      console.warn("Using local/empty orders due to DB error");
+      return [];
+    }
   },
-  saveOrder: (order: Order) => {
-    const orders = dataService.getOrders();
-    orders.unshift(order); // Add to top
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+  saveOrder: async (order: Order) => {
+    try {
+      await setDoc(doc(db, "orders", order.id), order);
+    } catch (e) {
+      console.warn("Failed to save order to DB (Permissions/Network)");
+    }
   },
-  updateOrderStatus: (id: string, status: 'pending' | 'completed' | 'cancelled') => {
-    const orders = dataService.getOrders();
-    const idx = orders.findIndex(o => o.id === id);
-    if (idx > -1) {
-        orders[idx].status = status;
-        localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+  updateOrderStatus: async (id: string, status: 'pending' | 'completed' | 'cancelled') => {
+    try {
+      const orderRef = doc(db, "orders", id);
+      await updateDoc(orderRef, { status: status });
+    } catch (e) {
+      console.warn("Failed to update order status");
     }
   },
 
   // Subscriptions
-  getSubscriptions: (): Subscription[] => {
-    const data = localStorage.getItem(SUBS_KEY);
-    return data ? JSON.parse(data) : [];
+  getSubscriptions: async (): Promise<Subscription[]> => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "subscriptions"));
+      const subs: Subscription[] = [];
+      querySnapshot.forEach((doc) => {
+        subs.push(doc.data() as Subscription);
+      });
+      return subs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    } catch (e) {
+      console.warn("Using local/empty subscriptions due to DB error");
+      return [];
+    }
   },
-  saveSubscription: (sub: Subscription) => {
-    const subs = dataService.getSubscriptions();
-    subs.unshift(sub);
-    localStorage.setItem(SUBS_KEY, JSON.stringify(subs));
+  saveSubscription: async (sub: Subscription) => {
+    try {
+      // Create a unique ID if not present
+      const id = sub.id || `sub_${Date.now()}`;
+      await setDoc(doc(db, "subscriptions", id), { ...sub, id });
+    } catch (e) {
+      console.warn("Failed to save subscription");
+    }
   },
 
   // Content
-  getContent: (): SiteContent => {
-    const dataStr = localStorage.getItem(CONTENT_KEY);
+  getContent: async (): Promise<SiteContent> => {
     const defaults: SiteContent = {
         heroTitle: 'نمط حياة خفيف وصحي للجميع',
         heroSubtitle: 'انكل هيلثي هو وجهتك الأولى للوجبات الصحية الفاخرة. نجمع بين الذكاء الاصطناعي والمكونات الطبيعية 100% لنقدم لك تجربة غذائية لا تُنسى.',
@@ -51,53 +68,182 @@ export const dataService = {
         missionTitle: 'مهمتنا',
         missionText: 'توفير وجبات صحية فاخرة مصنوعة من مكونات طبيعية 100%. نحن نجعل الحياة الصحية بسيطة، لذيذة، ومتاحة للجميع.',
         
-        // Default Policies
+        // Features Defaults
+        featuresList: [
+            'مكونات طبيعية 100%',
+            'استشارات مدعومة بالذكاء الاصطناعي',
+            'نظام اشتراك مرن',
+            'توصيل دقيق في الموعد'
+        ],
+
+        // Config
+        geminiApiKey: 'AIzaSyDnvOjiEVF5x-UGtMnEU8cuj-R8f8K_wUI',
+
+        // App Banner Defaults
+        appBannerTitle1: 'صحتك صارت',
+        appBannerHighlight: 'أسهل وأقرب',
+        appBannerText: 'حمل التطبيق الآن واستمتع بتجربة طلب أسرع، تتبع لخطتك الغذائية، وعروض حصرية. وجباتك الصحية بلمسة زر.',
+        appBannerImage: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+
         privacyPolicy: 'نحن نلتزم بحماية خصوصيتك. يتم استخدام بياناتك فقط لتحسين تجربتك وتوصيل طلباتك.',
         returnPolicy: 'نظراً لطبيعة المنتجات الغذائية، لا يمكن إرجاع الطلبات بعد استلامها إلا في حال وجود عيب مصنعي أو خطأ في الطلب.',
         paymentPolicy: 'نقبل الدفع نقداً عند الاستلام، أو عبر المحافظ الإلكترونية والبطاقات الائتمانية.',
-        
-        // Default Social
         socialFacebook: 'https://facebook.com',
         socialInstagram: 'https://instagram.com',
-        socialTwitter: 'https://twitter.com'
+        socialTwitter: 'https://twitter.com',
+        linkAndroid: '',
+        linkIOS: ''
     };
 
-    if (dataStr) {
-        const parsed = JSON.parse(dataStr);
-        // Merge with defaults to ensure new fields exist
-        return { ...defaults, ...parsed };
+    try {
+      const docRef = doc(db, "content", "main_content");
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data() as SiteContent;
+        // Merge with defaults to ensure new fields (like featuresList, geminiApiKey) exist if DB is old
+        return { 
+            ...defaults, 
+            ...data, 
+            featuresList: data.featuresList || defaults.featuresList,
+            geminiApiKey: data.geminiApiKey || defaults.geminiApiKey
+        };
+      } else {
+        try { await setDoc(docRef, defaults); } catch(err) {}
+        return defaults;
+      }
+    } catch (e) {
+      console.warn("Firebase content unavailable, using defaults.");
+      return defaults;
     }
-    
-    return defaults;
   },
-  saveContent: (content: SiteContent) => {
-    localStorage.setItem(CONTENT_KEY, JSON.stringify(content));
-  },
-
-  // Meals (Allowing edits)
-  getMeals: (): Meal[] => {
-    const data = localStorage.getItem(MEALS_KEY);
-    return data ? JSON.parse(data) : MEALS;
-  },
-  saveMeals: (meals: Meal[]) => {
-    localStorage.setItem(MEALS_KEY, JSON.stringify(meals));
-  },
-  addMeal: (meal: Meal) => {
-      const meals = dataService.getMeals();
-      meals.push(meal);
-      dataService.saveMeals(meals);
-  },
-  deleteMeal: (id: string) => {
-      const meals = dataService.getMeals();
-      const filtered = meals.filter(m => m.id !== id);
-      dataService.saveMeals(filtered);
+  
+  saveContent: async (content: SiteContent): Promise<boolean> => {
+    try {
+      await setDoc(doc(db, "content", "main_content"), content);
+      return true;
+    } catch (e) {
+      console.warn("Failed to save content", e);
+      return false;
+    }
   },
 
-  // API Key Management
-  getApiKey: (): string => {
-      return localStorage.getItem(API_KEY_STORAGE) || DEFAULT_API_KEY;
+  // Meals
+  getMeals: async (): Promise<Meal[]> => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "meals"));
+      const meals: Meal[] = [];
+      querySnapshot.forEach((doc) => {
+        meals.push(doc.data() as Meal);
+      });
+      
+      if (meals.length === 0) {
+        // Try to populate defaults
+        try {
+            for (const m of MEALS) {
+                await setDoc(doc(db, "meals", m.id), m);
+            }
+        } catch(err) {}
+        return MEALS;
+      }
+      return meals;
+    } catch (e) {
+      console.warn("Firebase meals unavailable, using local menu.");
+      return MEALS;
+    }
   },
-  saveApiKey: (key: string) => {
-      localStorage.setItem(API_KEY_STORAGE, key);
+  addMeal: async (meal: Meal) => {
+    try {
+        await setDoc(doc(db, "meals", meal.id), meal);
+    } catch (e) {
+        console.warn("Failed to add meal");
+    }
+  },
+  deleteMeal: async (id: string) => {
+    try {
+        await deleteDoc(doc(db, "meals", id));
+    } catch (e) {
+        console.warn("Failed to delete meal");
+    }
+  },
+
+  // Subscription Plans Management
+  getSubscriptionPlans: async (): Promise<SubscriptionPlan[]> => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "plans"));
+      const plans: SubscriptionPlan[] = [];
+      querySnapshot.forEach((doc) => {
+        plans.push(doc.data() as SubscriptionPlan);
+      });
+      
+      if (plans.length === 0) {
+         // Default Plans if empty
+         const defaults: SubscriptionPlan[] = [
+            { id: 'weekly', title: 'أسبوعي', price: 50, features: ['وجبات لمدة 6 أيام', 'توصيل مجاني', 'إمكانية تغيير الوجبات'], durationLabel: 'Weekly', isPopular: false },
+            { id: 'monthly', title: 'شهري', price: 180, features: ['وجبات لمدة 24 يوم', 'توصيل مجاني', 'استشارة مجانية', 'خصم 10%'], durationLabel: 'Monthly', isPopular: true },
+         ];
+         return defaults;
+      }
+      return plans;
+    } catch (e) {
+      return [];
+    }
+  },
+  saveSubscriptionPlan: async (plan: SubscriptionPlan) => {
+    try {
+        await setDoc(doc(db, "plans", plan.id), plan);
+    } catch (e) {
+        console.warn("Failed to save plan");
+    }
+  },
+  deleteSubscriptionPlan: async (id: string) => {
+    try {
+        await deleteDoc(doc(db, "plans", id));
+    } catch (e) {
+        console.warn("Failed to delete plan");
+    }
+  },
+
+  // Promo Codes Management
+  getPromoCodes: async (): Promise<PromoCode[]> => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "promos"));
+      const promos: PromoCode[] = [];
+      querySnapshot.forEach((doc) => {
+        promos.push(doc.data() as PromoCode);
+      });
+      return promos;
+    } catch (e) {
+      return [];
+    }
+  },
+  savePromoCode: async (promo: PromoCode) => {
+    try {
+        await setDoc(doc(db, "promos", promo.id), promo);
+    } catch (e) {
+        console.warn("Failed to save promo");
+    }
+  },
+  deletePromoCode: async (id: string) => {
+    try {
+        await deleteDoc(doc(db, "promos", id));
+    } catch (e) {
+        console.warn("Failed to delete promo");
+    }
+  },
+  verifyPromoCode: async (code: string, type: 'MEALS' | 'SUBSCRIPTION'): Promise<PromoCode | null> => {
+     try {
+        const querySnapshot = await getDocs(collection(db, "promos"));
+        let validPromo: PromoCode | null = null;
+        querySnapshot.forEach((doc) => {
+            const data = doc.data() as PromoCode;
+            if (data.code === code && data.isActive && data.type === type) {
+                validPromo = data;
+            }
+        });
+        return validPromo;
+     } catch (e) {
+         return null;
+     }
   }
 };

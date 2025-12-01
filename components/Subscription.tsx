@@ -1,44 +1,96 @@
-import React, { useState } from 'react';
-import { Subscription as SubscriptionModel, SubscriptionDuration, DeliverySlot } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Subscription as SubscriptionModel, DeliverySlot, SubscriptionPlan } from '../types';
 import { dataService } from '../services/dataService';
-import { Check, Clock, MapPin, Truck } from 'lucide-react';
+import { Check, Clock, MapPin, Truck, Tag } from 'lucide-react';
 
 export const Subscription: React.FC = () => {
   const [step, setStep] = useState(1);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  
   const [subData, setSubData] = useState<Partial<SubscriptionModel>>({
-    duration: SubscriptionDuration.WEEKLY,
     deliverySlot: DeliverySlot.MORNING,
     address: '',
     phone: ''
   });
+  
+  // Promo Logic
+  const [promoCode, setPromoCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [promoMessage, setPromoMessage] = useState('');
+  
+  const [loading, setLoading] = useState(false);
 
-  const plans = [
-    { id: SubscriptionDuration.WEEKLY, title: 'أسبوعي', price: 50, features: ['وجبات لمدة 6 أيام', 'توصيل مجاني', 'إمكانية تغيير الوجبات'] },
-    { id: SubscriptionDuration.MONTHLY, title: 'شهري', price: 180, features: ['وجبات لمدة 24 يوم', 'توصيل مجاني', 'استشارة مجانية', 'خصم 10%'] },
-  ];
+  useEffect(() => {
+    const fetchPlans = async () => {
+        setPlans(await dataService.getSubscriptionPlans());
+    };
+    fetchPlans();
+  }, []);
 
-  const handleSelectPlan = (id: SubscriptionDuration) => {
+  const handleSelectPlan = (id: string) => {
+    setSelectedPlanId(id);
     setSubData(prev => ({ ...prev, duration: id }));
     setStep(2);
+    // Reset Promo when changing plans
+    setDiscount(0);
+    setAppliedPromo(null);
+    setPromoCode('');
+    setPromoMessage('');
   };
 
-  const handleDetailsSubmit = (e: React.FormEvent) => {
+  const handleApplyPromo = async () => {
+      if (!promoCode) return;
+      
+      const promo = await dataService.verifyPromoCode(promoCode.toUpperCase(), 'SUBSCRIPTION');
+      if (promo) {
+          const selectedPlan = plans.find(p => p.id === selectedPlanId);
+          if (selectedPlan) {
+             let discVal = 0;
+             if (promo.isPercentage) {
+                 discVal = selectedPlan.price * (promo.discountAmount / 100);
+             } else {
+                 discVal = promo.discountAmount;
+             }
+             setDiscount(discVal);
+             setAppliedPromo(promo.code);
+             setPromoMessage('تم تفعيل الخصم بنجاح! 🎉');
+          }
+      } else {
+          setPromoMessage('كود الخصم غير صالح أو غير مخصص للاشتراكات ❌');
+          setDiscount(0);
+          setAppliedPromo(null);
+      }
+  };
+
+  const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    // Save Subscription
-    if(subData.address && subData.phone && subData.duration && subData.deliverySlot) {
-        dataService.saveSubscription({
-            duration: subData.duration,
+    const selectedPlan = plans.find(p => p.id === selectedPlanId);
+
+    if(subData.address && subData.phone && selectedPlanId && subData.deliverySlot && selectedPlan) {
+        const finalPrice = Math.max(0, selectedPlan.price - discount);
+        
+        await dataService.saveSubscription({
+            duration: selectedPlan.durationLabel, // Store label for readability
             deliverySlot: subData.deliverySlot,
             address: subData.address,
             phone: subData.phone,
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            planTitle: selectedPlan.title,
+            pricePaid: finalPrice
         });
     }
 
+    setLoading(false);
     alert('تم استلام طلب الاشتراك بنجاح! سيتواصل معك فريقنا قريباً.');
-    setStep(1); // Reset for demo
+    setStep(1);
+    setSelectedPlanId(null);
   };
+
+  const selectedPlan = plans.find(p => p.id === selectedPlanId);
 
   return (
     <div className="max-w-4xl mx-auto py-8">
@@ -50,11 +102,13 @@ export const Subscription: React.FC = () => {
       {step === 1 && (
         <div className="grid md:grid-cols-2 gap-8">
           {plans.map(plan => (
-            <div key={plan.id} className="bg-white rounded-3xl p-8 shadow-lg border-2 border-transparent hover:border-uh-green transition relative overflow-hidden group">
-              <div className="absolute top-0 right-0 bg-uh-gold text-uh-dark px-4 py-1 rounded-bl-xl text-sm font-bold opacity-0 group-hover:opacity-100 transition">الأكثر طلباً</div>
+            <div key={plan.id} className="bg-white rounded-3xl p-8 shadow-lg border-2 border-transparent hover:border-uh-green transition relative overflow-hidden group flex flex-col">
+              {plan.isPopular && (
+                  <div className="absolute top-0 right-0 bg-uh-gold text-uh-dark px-4 py-1 rounded-bl-xl text-sm font-bold shadow-sm">الأكثر طلباً</div>
+              )}
               <h3 className="text-2xl font-bold mb-4">{plan.title}</h3>
               <div className="text-4xl font-brand text-uh-greenDark mb-6">{plan.price} <span className="text-lg text-gray-400">د.أ</span></div>
-              <ul className="space-y-4 mb-8">
+              <ul className="space-y-4 mb-8 flex-1">
                 {plan.features.map((f, i) => (
                     <li key={i} className="flex items-center gap-3 text-gray-600">
                         <Check className="text-uh-green" size={18} />
@@ -73,12 +127,13 @@ export const Subscription: React.FC = () => {
         </div>
       )}
 
-      {step === 2 && (
+      {step === 2 && selectedPlan && (
         <div className="bg-white rounded-3xl shadow-xl p-8 max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                 <Truck className="text-uh-gold" />
-                تفاصيل التوصيل
+                تفاصيل الاشتراك: <span className="text-uh-green">{selectedPlan.title}</span>
             </h3>
+            
             <form onSubmit={handleDetailsSubmit} className="space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -127,9 +182,51 @@ export const Subscription: React.FC = () => {
                     />
                 </div>
 
+                {/* Promo Code Section */}
+                <div className="bg-uh-cream/50 p-4 rounded-xl border border-uh-cream">
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <Tag size={16}/> لديك كوبون خصم؟
+                    </label>
+                    <div className="flex gap-2">
+                        <input 
+                            value={promoCode}
+                            onChange={e => setPromoCode(e.target.value)}
+                            disabled={!!appliedPromo}
+                            className="flex-1 border rounded-lg p-2 uppercase font-mono text-sm"
+                            placeholder="CODE"
+                        />
+                        {appliedPromo ? (
+                            <button type="button" onClick={() => { setAppliedPromo(null); setDiscount(0); setPromoCode(''); setPromoMessage(''); }} className="text-red-500 text-sm font-bold px-2">إلغاء</button>
+                        ) : (
+                            <button type="button" onClick={handleApplyPromo} className="bg-uh-dark text-white px-4 rounded-lg text-sm">تطبيق</button>
+                        )}
+                    </div>
+                    {promoMessage && <p className={`text-xs mt-2 ${appliedPromo ? 'text-green-600' : 'text-red-500'}`}>{promoMessage}</p>}
+                </div>
+
+                {/* Pricing Summary */}
+                <div className="border-t pt-4">
+                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>سعر الباقة</span>
+                        <span>{selectedPlan.price} د.أ</span>
+                    </div>
+                    {discount > 0 && (
+                        <div className="flex justify-between text-sm text-green-600 mb-1 font-bold">
+                            <span>خصم الكوبون</span>
+                            <span>- {discount.toFixed(2)} د.أ</span>
+                        </div>
+                    )}
+                    <div className="flex justify-between text-xl font-bold text-uh-dark mt-2">
+                        <span>الإجمالي</span>
+                        <span>{(Math.max(0, selectedPlan.price - discount)).toFixed(2)} د.أ</span>
+                    </div>
+                </div>
+
                 <div className="pt-4 flex gap-4">
                     <button type="button" onClick={() => setStep(1)} className="px-6 py-3 text-gray-500 hover:bg-gray-100 rounded-xl">رجوع</button>
-                    <button type="submit" className="flex-1 bg-uh-green text-white font-bold py-3 rounded-xl hover:bg-uh-greenDark shadow-lg">تأكيد الاشتراك</button>
+                    <button type="submit" disabled={loading} className="flex-1 bg-uh-green text-white font-bold py-3 rounded-xl hover:bg-uh-greenDark shadow-lg disabled:opacity-50">
+                        {loading ? 'جاري المعالجة...' : 'تأكيد الاشتراك'}
+                    </button>
                 </div>
             </form>
         </div>

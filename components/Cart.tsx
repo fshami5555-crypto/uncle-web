@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { CartItem, UserProfile } from '../types';
 import { dataService } from '../services/dataService';
-import { Trash2, Plus, Minus, MapPin, Phone, CheckCircle, ArrowLeft, ShoppingBag } from 'lucide-react';
+import { Trash2, Plus, Minus, MapPin, Phone, CheckCircle, ArrowLeft, ShoppingBag, Tag } from 'lucide-react';
 
 interface CartProps {
   items: CartItem[];
@@ -16,11 +16,53 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState(user.phone || '');
   const [isOrdered, setIsOrdered] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Promo Logic
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [promoMessage, setPromoMessage] = useState('');
 
-  const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const total = Math.max(0, subTotal - discountAmount);
 
-  const handleCheckout = (e: React.FormEvent) => {
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return;
+    
+    setPromoMessage('');
+    const promo = await dataService.verifyPromoCode(promoCode.toUpperCase(), 'MEALS');
+    
+    if (promo) {
+        let disc = 0;
+        if (promo.isPercentage) {
+            disc = subTotal * (promo.discountAmount / 100);
+        } else {
+            disc = promo.discountAmount;
+        }
+        // Cap discount at subtotal
+        if (disc > subTotal) disc = subTotal;
+        
+        setDiscountAmount(disc);
+        setAppliedPromo(promo.code);
+        setPromoMessage('تم تفعيل الخصم بنجاح! 🎉');
+    } else {
+        setDiscountAmount(0);
+        setAppliedPromo(null);
+        setPromoMessage('كود الخصم غير صالح للوجبات ❌');
+    }
+  };
+
+  const handleRemovePromo = () => {
+      setAppliedPromo(null);
+      setDiscountAmount(0);
+      setPromoCode('');
+      setPromoMessage('');
+  };
+
+  const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
     // Create Order Object
     const newOrder = {
@@ -31,11 +73,14 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
         address: address,
         phone: phone,
         date: new Date().toISOString(),
-        status: 'pending' as const
+        status: 'pending' as const,
+        promoCode: appliedPromo || undefined,
+        discountApplied: discountAmount > 0 ? discountAmount : undefined
     };
 
-    // Save using data service
-    dataService.saveOrder(newOrder);
+    // Save using data service (async)
+    await dataService.saveOrder(newOrder);
+    setLoading(false);
 
     setIsOrdered(true);
     setTimeout(() => {
@@ -96,9 +141,23 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
                 </div>
             </div>
         ))}
-        <div className="bg-uh-cream p-4 rounded-xl flex justify-between items-center font-bold text-uh-dark text-lg">
-            <span>المجموع الكلي:</span>
-            <span>{total.toFixed(2)} د.أ</span>
+        
+        {/* Total Block */}
+        <div className="bg-uh-cream p-4 rounded-xl space-y-2">
+            <div className="flex justify-between items-center text-gray-600">
+                <span>المجموع الفرعي:</span>
+                <span>{subTotal.toFixed(2)} د.أ</span>
+            </div>
+            {discountAmount > 0 && (
+                 <div className="flex justify-between items-center text-green-600 font-bold">
+                    <span>الخصم ({appliedPromo}):</span>
+                    <span>- {discountAmount.toFixed(2)} د.أ</span>
+                </div>
+            )}
+            <div className="flex justify-between items-center font-bold text-uh-dark text-lg border-t border-uh-dark/10 pt-2 mt-2">
+                <span>المجموع الكلي:</span>
+                <span>{total.toFixed(2)} د.أ</span>
+            </div>
         </div>
       </div>
 
@@ -140,8 +199,28 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
                 </div>
             </div>
 
-            <button type="submit" className="w-full bg-uh-dark text-white font-bold py-4 rounded-xl hover:bg-black transition shadow-md mt-4 flex justify-center items-center gap-2">
-                تأكيد الطلب
+             {/* Promo Code Input */}
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"><Tag size={14}/> كوبون الخصم</label>
+                <div className="flex gap-2">
+                    <input 
+                        value={promoCode}
+                        onChange={e => setPromoCode(e.target.value)}
+                        disabled={!!appliedPromo}
+                        className="flex-1 border rounded-lg p-2 uppercase font-mono text-sm" 
+                        placeholder="CODE"
+                    />
+                    {appliedPromo ? (
+                        <button type="button" onClick={handleRemovePromo} className="text-red-500 text-sm font-bold px-2">حذف</button>
+                    ) : (
+                        <button type="button" onClick={handleApplyPromo} className="bg-gray-800 text-white px-3 rounded-lg text-sm">تفعيل</button>
+                    )}
+                </div>
+                {promoMessage && <p className={`text-xs mt-1 ${appliedPromo ? 'text-green-600' : 'text-red-500'}`}>{promoMessage}</p>}
+            </div>
+
+            <button type="submit" disabled={loading} className="w-full bg-uh-dark text-white font-bold py-4 rounded-xl hover:bg-black transition shadow-md mt-4 flex justify-center items-center gap-2 disabled:opacity-50">
+                {loading ? 'جاري التنفيذ...' : 'تأكيد الطلب'}
             </button>
         </form>
       </div>

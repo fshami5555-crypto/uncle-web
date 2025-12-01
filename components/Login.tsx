@@ -9,17 +9,27 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin, onGoToSignup }) => {
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = authService.login(phone, password);
-    if (user) {
-      onLogin(user);
-    } else {
-      setError('رقم الهاتف أو كلمة المرور غير صحيحة');
+    setLoading(true);
+    setError('');
+    
+    try {
+        const user = await authService.login(identifier, password);
+        if (user) {
+          onLogin(user);
+        } else {
+          setError('رقم الهاتف أو كلمة المرور غير صحيحة');
+        }
+    } catch (e) {
+        setError('حدث خطأ أثناء تسجيل الدخول');
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -34,10 +44,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onGoToSignup }) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
             <div className="relative">
               <input 
-                type="tel" 
+                type="text" 
                 required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full pl-4 pr-10 py-3 border rounded-xl focus:ring-2 focus:ring-uh-green outline-none"
                 placeholder="079xxxxxxx"
               />
@@ -64,9 +74,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onGoToSignup }) => {
 
           <button 
             type="submit" 
-            className="w-full bg-uh-green text-white font-bold py-3 rounded-xl hover:bg-uh-greenDark transition shadow-md mt-4"
+            disabled={loading}
+            className="w-full bg-uh-green text-white font-bold py-3 rounded-xl hover:bg-uh-greenDark transition shadow-md mt-4 disabled:opacity-50"
           >
-            دخول
+            {loading ? 'جاري التحقق...' : 'دخول'}
           </button>
         </form>
 

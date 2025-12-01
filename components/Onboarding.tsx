@@ -5,6 +5,7 @@ import { MessageSquare, FileText, Send, User, ChevronLeft, Lock } from 'lucide-r
 import { GoogleGenAI } from '@google/genai';
 import { generateWeeklyPlan } from '../services/geminiService';
 import { authService } from '../services/authService';
+import { dataService } from '../services/dataService';
 
 interface OnboardingProps {
   onComplete: (profile: UserProfile) => void;
@@ -45,7 +46,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      // Fetch key dynamically
+      const content = await dataService.getContent();
+      const apiKey = content.geminiApiKey || process.env.API_KEY || '';
+      
+      const ai = new GoogleGenAI({ apiKey });
       const chat = ai.chats.create({
         model: "gemini-2.5-flash",
         config: {
@@ -86,7 +91,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
       setMessages(prev => [...prev, { role: 'model', text: text.replace(/\{[\s\S]*\}/, '') }]);
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'model', text: 'حدث خطأ، يرجى المحاولة مرة أخرى.' }]);
+      setMessages(prev => [...prev, { role: 'model', text: 'حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى أو التأكد من الإعدادات.' }]);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -117,14 +123,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             savedPlan: plan
         };
 
-        // 3. Persist to Mock DB
-        authService.register(finalProfile);
+        // 3. Persist to DB (Async now)
+        await authService.register(finalProfile);
 
         // 4. Complete
         onComplete(finalProfile);
     } catch (error) {
         console.error("Registration failed", error);
-        alert("حدث خطأ أثناء إنشاء الحساب");
+        alert("حدث خطأ أثناء إنشاء الحساب. قد يكون رقم الهاتف مستخدماً بالفعل.");
     } finally {
         setIsGenerating(false);
     }

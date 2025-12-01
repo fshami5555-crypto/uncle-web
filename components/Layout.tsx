@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PageView, SiteContent } from '../types';
-import { Menu, User, ShoppingBag, Calendar, Home, LogIn, LogOut, Facebook, Instagram, Twitter, Heart } from 'lucide-react';
+import { Menu, User, ShoppingBag, Calendar, Home, LogIn, LogOut, Facebook, Instagram, Twitter, Heart, Smartphone } from 'lucide-react';
 import { dataService } from '../services/dataService';
 
 interface LayoutProps {
@@ -16,11 +16,43 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
   const [content, setContent] = useState<SiteContent | null>(null);
 
   useEffect(() => {
-    setContent(dataService.getContent());
+    const fetch = async () => {
+        setContent(await dataService.getContent());
+    };
+    fetch();
   }, []);
 
   const navItemClass = (view: PageView) => 
     `flex flex-col items-center gap-1 cursor-pointer transition-colors ${currentView === view ? 'text-uh-green font-bold' : 'text-uh-dark hover:text-uh-gold'}`;
+
+  // Helper to render App Buttons
+  const renderAppButtons = (isFooter = false) => {
+      // Adjusted height slightly to ensure visibility and button-like feel
+      const imgClass = "h-12 w-auto object-contain transition hover:scale-105 cursor-pointer";
+        
+      return (
+        <div className={`flex items-center gap-3 ${isFooter ? 'justify-center md:justify-start' : 'hidden lg:flex'}`}>
+            {content?.linkAndroid && (
+                <a href={content.linkAndroid} target="_blank" rel="noreferrer">
+                    <img 
+                        src="https://i.ibb.co/hJnCvx8F/play.png" 
+                        alt="Get it on Google Play" 
+                        className={imgClass}
+                    />
+                </a>
+            )}
+            {content?.linkIOS && (
+                <a href={content.linkIOS} target="_blank" rel="noreferrer">
+                    <img 
+                        src="https://i.ibb.co/0RTdQBk3/play-1.png" 
+                        alt="Download on the App Store" 
+                        className={imgClass}
+                    />
+                </a>
+            )}
+        </div>
+      );
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-uh-cream">
@@ -40,6 +72,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
           </nav>
 
           <div className="flex items-center gap-4">
+             {/* App Buttons (Desktop Header) */}
+             {renderAppButtons()}
+
              {/* Cart Icon */}
              <button onClick={() => setView('CART')} className="relative p-2 text-uh-dark hover:text-uh-green transition">
                 <ShoppingBag size={24} />
@@ -119,14 +154,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
                 </ul>
              </div>
 
-             {/* Links 2 (Policies) */}
+             {/* Links 2 (Policies & App) */}
              <div>
                 <h3 className="font-bold text-lg mb-4 text-uh-gold">معلومات هامة</h3>
-                <ul className="space-y-2 text-gray-300">
+                <ul className="space-y-2 text-gray-300 mb-6">
                     <li><button onClick={() => setView('PRIVACY_POLICY')} className="hover:text-white transition">سياسة الاستخدام والخصوصية</button></li>
                     <li><button onClick={() => setView('RETURN_POLICY')} className="hover:text-white transition">سياسة الإرجاع</button></li>
                     <li><button onClick={() => setView('PAYMENT_POLICY')} className="hover:text-white transition">نظام الدفع</button></li>
                 </ul>
+                
+                {/* App Buttons (Footer) */}
+                <div className="pt-4 border-t border-white/10">
+                     <p className="text-xs text-gray-400 mb-2">حمل التطبيق الآن</p>
+                     {renderAppButtons(true)}
+                </div>
              </div>
           </div>
 
