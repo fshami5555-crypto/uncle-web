@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
+    <!-- Force HTTPS -->
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <script>
+      // Redirect to HTTPS automatically if not on localhost
+      if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        window.location.href = window.location.href.replace('http:', 'https:');
+      }
+    </script>
+    
     <!-- SEO & Meta Description -->
     <title>Uncle Healthy | منصة الوجبات الصحية الذكية</title>
     <meta name="description" content="انكل هيلثي: وجهتك الأولى للوجبات الصحية الفاخرة المدعومة بالذكاء الاصطناعي. تمتع بخطط غذائية مخصصة، مكونات طبيعية 100%، وتوصيل دقيق لباب بيتك. صحتك صارت أسهل وأقرب." />
