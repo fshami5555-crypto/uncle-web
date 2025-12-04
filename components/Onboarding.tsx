@@ -46,7 +46,17 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      // Fetch API Key dynamically
+      const content = await dataService.getContent();
+      const apiKey = content.geminiApiKey;
+
+      if (!apiKey) {
+        setMessages(prev => [...prev, { role: 'model', text: 'عذراً، خدمة المساعد الذكي غير متاحة حالياً (المفتاح غير مضبوط في الإعدادات).' }]);
+        setLoading(false);
+        return;
+      }
+
+      const ai = new GoogleGenAI({ apiKey: apiKey });
       const chat = ai.chats.create({
         model: "gemini-2.5-flash",
         config: {
@@ -108,6 +118,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setIsGenerating(true);
     try {
         // 1. Generate Plan One Time
+        // This service already uses the dynamic API key from dataService internally
         const plan = await generateWeeklyPlan(formData);
         
         // 2. Prepare Complete User Object
