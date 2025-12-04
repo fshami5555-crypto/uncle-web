@@ -7,6 +7,21 @@ export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]
   // Now async
   const currentMeals = await dataService.getMeals();
   const mealList = currentMeals.map(m => `${m.id}: ${m.name} (${m.macros.calories}kcal)`).join(', ');
+  
+  // Fetch API Key from DB
+  const content = await dataService.getContent();
+  const apiKey = content.geminiApiKey;
+
+  if (!apiKey) {
+      console.warn("Gemini API Key is missing in Admin Settings.");
+      // Return default plan immediately if no key
+      return Array.from({ length: 7 }).map((_, i) => ({
+        day: `Day ${i + 1}`,
+        breakfast: MEALS[3],
+        lunch: MEALS[0],
+        dinner: MEALS[1]
+      }));
+  }
 
   const prompt = `
     You are an expert nutritionist for 'Uncle Healthy'.
@@ -37,7 +52,7 @@ export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]
   `;
 
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -87,6 +102,14 @@ export const chatWithNutritionist = async (history: {role: string, text: string}
     const currentMeals = await dataService.getMeals();
     const menuContext = currentMeals.map(m => `- ${m.name}: ${m.description} (${m.macros.calories} Cal, ${m.macros.protein}g Protein). Price: ${m.price}`).join('\n');
 
+    // Fetch API Key from DB
+    const content = await dataService.getContent();
+    const apiKey = content.geminiApiKey;
+
+    if (!apiKey) {
+        return "عذراً، خدمة الذكاء الاصطناعي متوقفة حالياً لعدم توفر مفتاح التشغيل. يرجى التواصل مع الإدارة.";
+    }
+
     const systemInstruction = `
       You are the official AI Assistant for "Uncle Healthy" website.
       You speak Arabic. You are friendly, helpful, and knowledgeable about nutrition.
@@ -103,7 +126,7 @@ export const chatWithNutritionist = async (history: {role: string, text: string}
     `;
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: apiKey });
       const chat = ai.chats.create({
         model: "gemini-2.5-flash",
         config: { systemInstruction }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserProfile, Order, Subscription, SiteContent, Meal, SubscriptionPlan, PromoCode } from '../types';
 import { authService } from '../services/authService';
 import { dataService } from '../services/dataService';
-import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit } from 'lucide-react';
+import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap } from 'lucide-react';
 import { INITIAL_USER_PROFILE, MEALS } from '../constants';
 
 interface AdminDashboardProps {
@@ -55,7 +55,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const handleSaveContent = async (e: React.FormEvent) => {
       e.preventDefault();
       await dataService.saveContent(content);
-      alert('تم حفظ المحتوى بنجاح');
+      alert('تم حفظ المحتوى والإعدادات بنجاح');
   };
 
   const handleDeleteMeal = async (id: string) => {
@@ -183,12 +183,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <div className="max-w-3xl">
                       <h2 className="text-2xl font-bold text-uh-dark mb-6">إدارة المحتوى</h2>
                       <form onSubmit={handleSaveContent} className="space-y-6 bg-white p-6 rounded-xl shadow-sm">
+                          
+                          {/* API KEY SECTION */}
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                              <h3 className="font-bold border-b border-blue-200 pb-2 mb-4 flex items-center gap-2 text-uh-dark">
+                                  <Zap className="text-uh-gold" fill="currentColor" />
+                                  إعدادات الذكاء الاصطناعي (Gemini)
+                              </h3>
+                              <div>
+                                  <label className="block text-sm font-bold mb-1 text-gray-700">مفتاح API (Gemini API Key)</label>
+                                  <div className="relative">
+                                    <input 
+                                        type="text" 
+                                        value={content.geminiApiKey || ''} 
+                                        onChange={e => setContent({...content, geminiApiKey: e.target.value})} 
+                                        className="w-full border border-blue-200 rounded p-3 pl-10 font-mono text-sm bg-white focus:ring-2 focus:ring-blue-300 outline-none" 
+                                        placeholder="AIzaSy..." 
+                                    />
+                                    <Key className="absolute left-3 top-3 text-gray-400" size={18} />
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-2">
+                                      * هام: هذا المفتاح مسؤول عن تشغيل الدردشة الذكية وتوليد الخطط الغذائية. تأكد من نسخه بشكل صحيح من Google AI Studio.
+                                  </p>
+                              </div>
+                          </div>
+
                           <div className="grid md:grid-cols-2 gap-4">
                               <div>
                                   <label className="block text-sm font-bold mb-1">العنوان الرئيسي</label>
                                   <input value={content.heroTitle} onChange={e => setContent({...content, heroTitle: e.target.value})} className="w-full border rounded p-2" />
                               </div>
-                              {/* Removed API Key management as it should be handled via environment variables */}
                           </div>
                           
                           <div>
