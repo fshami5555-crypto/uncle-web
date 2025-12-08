@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { PageView, SiteContent } from '../types';
 import { dataService } from '../services/dataService';
-import { ArrowLeft, CheckCircle, Smartphone, Star } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Smartphone, Star, X, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface HomeProps {
   onStart: () => void;
@@ -9,18 +9,43 @@ interface HomeProps {
 
 export const Home: React.FC<HomeProps> = ({ onStart }) => {
   const [content, setContent] = useState<SiteContent | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
   useEffect(() => {
     const fetch = async () => {
         setContent(await dataService.getContent());
     };
     fetch();
+
+    // Show modal only once per session
+    const hasSeen = sessionStorage.getItem('hasSeenWelcome');
+    if (!hasSeen) {
+        // Small delay for smooth entrance
+        setTimeout(() => setShowWelcomeModal(true), 500);
+        sessionStorage.setItem('hasSeenWelcome', 'true');
+    }
   }, []);
 
   // Use defaults if loading or not found
   const heroTitle = content?.heroTitle || "نمط حياة خفيف وصحي للجميع";
   const heroSubtitle = content?.heroSubtitle || "انكل هيلثي هو وجهتك الأولى للوجبات الصحية الفاخرة. نجمع بين الذكاء الاصطناعي والمكونات الطبيعية 100% لنقدم لك تجربة غذائية لا تُنسى.";
-  const heroImage = content?.heroImage || "https://i.ibb.co/6J8BHK9s/28.jpg";
+  
+  // Hero Slider Images
+  const heroImages = [
+    content?.heroImage || "https://i.ibb.co/6J8BHK9s/28.jpg",
+    "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80", // Salad
+    "https://images.unsplash.com/photo-1490645935967-10de6ba17061?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"  // Healthy Bowl
+  ];
+
+  const handleNextSlide = () => {
+    setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length);
+  };
+
+  const handlePrevSlide = () => {
+    setCurrentHeroIndex((prev) => (prev - 1 + heroImages.length) % heroImages.length);
+  };
+
   const missionTitle = content?.missionTitle || "مهمتنا";
   const missionText = content?.missionText || "توفير وجبات صحية فاخرة مصنوعة من مكونات طبيعية 100%. نحن نجعل الحياة الصحية بسيطة، لذيذة، ومتاحة للجميع. ليس مجرد طعام، بل أسلوب حياة.";
   
@@ -39,7 +64,51 @@ export const Home: React.FC<HomeProps> = ({ onStart }) => {
   const appImage = content?.appBannerImage || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80";
 
   return (
-    <div className="space-y-16 py-8">
+    <div className="space-y-16 py-8 relative">
+      
+      {/* Welcome Modal */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+           <div className="bg-white rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl relative border-4 border-uh-cream transform transition-all scale-100">
+              <button 
+                onClick={() => setShowWelcomeModal(false)} 
+                className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition"
+              >
+                <X />
+              </button>
+              
+              <div className="w-24 h-24 bg-uh-cream rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner relative">
+                 <img src="https://i.ibb.co/nqmV5jzX/23.png" className="w-16 h-16 object-contain drop-shadow-md" alt="Logo" />
+                 <div className="absolute -top-1 -right-1 bg-uh-green text-white p-1.5 rounded-full animate-bounce">
+                    <Sparkles size={16} fill="currentColor" />
+                 </div>
+              </div>
+              
+              <h2 className="text-2xl md:text-3xl font-brand font-bold text-uh-dark mb-4 leading-relaxed">
+                  اجعل مساعدك الصحي الذكي <br/>
+                  <span className="text-uh-green">يعد لك خطتك الصحية</span> <br/>
+                  لتحقيق هدفك
+              </h2>
+              
+              <p className="text-gray-500 mb-8 text-sm">
+                  دع الذكاء الاصطناعي يحلل بياناتك ويصمم لك الجدول الغذائي الأمثل في ثوانٍ.
+              </p>
+
+              <button 
+                  onClick={() => { setShowWelcomeModal(false); onStart(); }} 
+                  className="w-full bg-uh-green text-white font-bold py-4 rounded-xl text-lg hover:bg-uh-greenDark transition shadow-lg mb-4 flex items-center justify-center gap-2 group"
+              >
+                  <span>ابدأ رحلتك الصحية</span>
+                  <ArrowLeft className="group-hover:-translate-x-1 transition" />
+              </button>
+              
+              <button onClick={() => setShowWelcomeModal(false)} className="text-gray-400 text-sm hover:text-uh-dark underline decoration-gray-300">
+                  تصفح الموقع أولاً
+              </button>
+           </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="flex flex-col-reverse md:flex-row items-center justify-between gap-8 animate-fade-in">
         <div className="flex-1 space-y-6 text-center md:text-right">
@@ -57,17 +126,51 @@ export const Home: React.FC<HomeProps> = ({ onStart }) => {
             <ArrowLeft size={20} />
           </button>
         </div>
-        <div className="flex-1">
-          <img 
-            src={heroImage} 
-            alt="Healthy Bowl" 
-            className="rounded-3xl shadow-2xl rotate-3 border-4 border-white hover:rotate-0 transition duration-500"
-          />
+        
+        {/* Hero Slider Image */}
+        <div className="flex-1 relative group w-full max-w-lg mx-auto">
+            <div className="relative overflow-hidden rounded-3xl shadow-2xl border-4 border-white rotate-3 group-hover:rotate-0 transition duration-500 h-[350px] md:h-[450px]">
+                <img 
+                    src={heroImages[currentHeroIndex]} 
+                    alt={`Healthy Meal ${currentHeroIndex + 1}`} 
+                    className="w-full h-full object-cover animate-fade-in transition-all duration-500"
+                    key={currentHeroIndex} // Key forces re-render for animation
+                />
+                
+                {/* Overlay Gradient for contrast */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+
+                {/* Navigation Buttons */}
+                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 opacity-0 group-hover:opacity-100 transition duration-300">
+                    <button 
+                        onClick={handleNextSlide}
+                        className="bg-white/80 hover:bg-white text-uh-dark p-2 rounded-full shadow-lg transform transition hover:scale-110"
+                    >
+                        <ChevronRight size={24} />
+                    </button>
+                    <button 
+                        onClick={handlePrevSlide}
+                        className="bg-white/80 hover:bg-white text-uh-dark p-2 rounded-full shadow-lg transform transition hover:scale-110"
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+                </div>
+
+                {/* Dots Indicator */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {heroImages.map((_, idx) => (
+                        <div 
+                            key={idx} 
+                            className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === currentHeroIndex ? 'bg-uh-gold w-4' : 'bg-white/60'}`}
+                        />
+                    ))}
+                </div>
+            </div>
         </div>
       </div>
 
-      {/* App Download Banner */}
-      <div className="bg-uh-dark rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden shadow-2xl flex flex-col md:flex-row items-center justify-between gap-12 group border-4 border-uh-cream">
+      {/* App Download Banner - HIDDEN ON MOBILE */}
+      <div className="hidden md:flex bg-uh-dark rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden shadow-2xl flex-col md:flex-row items-center justify-between gap-12 group border-4 border-uh-cream">
          {/* Decorative Background Elements */}
          <div className="absolute top-0 right-0 w-80 h-80 bg-uh-green/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
          <div className="absolute bottom-0 left-0 w-64 h-64 bg-uh-gold/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none"></div>

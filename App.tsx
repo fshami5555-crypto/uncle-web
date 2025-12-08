@@ -109,7 +109,8 @@ const App: React.FC = () => {
 
     switch (currentView) {
       case 'HOME':
-        return <Home onStart={() => setCurrentView(user.hasProfile ? 'PROFILE' : 'LOGIN')} />;
+        // Modified: onStart now goes directly to ONBOARDING for new users instead of Login
+        return <Home onStart={() => setCurrentView(user.hasProfile ? 'PROFILE' : 'ONBOARDING')} />;
       case 'LOGIN':
         return <Login onLogin={handleLogin} onGoToSignup={() => setCurrentView('ONBOARDING')} />;
       case 'ONBOARDING':
