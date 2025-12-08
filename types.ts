@@ -45,6 +45,7 @@ export interface SubscriptionPlan {
   id: string;
   title: string;
   price: number;
+  image?: string; // Added image for the plan
   features: string[];
   durationLabel: string; // e.g., "Weekly", "Monthly", "VIP"
   isPopular?: boolean;

@@ -105,26 +105,36 @@ export const Subscription: React.FC = () => {
       {step === 1 && (
         <div className="grid md:grid-cols-2 gap-8 animate-fade-in">
           {plans.map(plan => (
-            <div key={plan.id} className="bg-white rounded-3xl p-8 shadow-lg border-2 border-transparent hover:border-uh-green transition relative overflow-hidden group flex flex-col">
-              {plan.isPopular && (
-                  <div className="absolute top-0 right-0 bg-uh-gold text-uh-dark px-4 py-1 rounded-bl-xl text-sm font-bold shadow-sm">الأكثر طلباً</div>
+            <div key={plan.id} className="bg-white rounded-3xl shadow-lg border-2 border-transparent hover:border-uh-green transition relative overflow-hidden group flex flex-col">
+              {plan.image && (
+                <div className="h-48 overflow-hidden">
+                    <img src={plan.image} alt={plan.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                </div>
               )}
-              <h3 className="text-2xl font-bold mb-4 text-uh-dark">{plan.title}</h3>
-              <div className="text-4xl font-brand text-uh-greenDark mb-6">{plan.price} <span className="text-lg text-gray-400">د.أ</span></div>
-              <ul className="space-y-4 mb-8 flex-1">
-                {plan.features.map((f, i) => (
-                    <li key={i} className="flex items-center gap-3 text-gray-600">
-                        <Check className="text-uh-green" size={18} />
-                        {f}
-                    </li>
-                ))}
-              </ul>
-              <button 
-                onClick={() => handleSelectPlan(plan.id)}
-                className="w-full bg-uh-dark text-white py-3 rounded-xl font-bold hover:bg-black transition"
-              >
-                اختيار الباقة
-              </button>
+              
+              {plan.isPopular && (
+                  <div className="absolute top-0 right-0 bg-uh-gold text-uh-dark px-4 py-1 rounded-bl-xl text-sm font-bold shadow-sm z-10">الأكثر طلباً</div>
+              )}
+              
+              <div className="p-8 flex flex-col flex-1">
+                <h3 className="text-2xl font-bold mb-2 text-uh-dark">{plan.title}</h3>
+                <div className="text-4xl font-brand text-uh-greenDark mb-6">{plan.price} <span className="text-lg text-gray-400">د.أ</span> <span className="text-sm text-gray-400 font-sans">/ {plan.durationLabel}</span></div>
+                
+                <ul className="space-y-4 mb-8 flex-1">
+                    {plan.features.map((f, i) => (
+                        <li key={i} className="flex items-center gap-3 text-gray-600">
+                            <Check className="text-uh-green" size={18} />
+                            {f}
+                        </li>
+                    ))}
+                </ul>
+                <button 
+                    onClick={() => handleSelectPlan(plan.id)}
+                    className="w-full bg-uh-dark text-white py-3 rounded-xl font-bold hover:bg-black transition"
+                >
+                    اختيار الباقة
+                </button>
+              </div>
             </div>
           ))}
         </div>

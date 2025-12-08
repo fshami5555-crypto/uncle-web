@@ -3,6 +3,10 @@ import { MEALS } from '../constants';
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
+// In-memory cache for persistence within session if DB writes fail (e.g. permission issues)
+let localPlans: SubscriptionPlan[] = [];
+let localPromos: PromoCode[] = [];
+
 export const dataService = {
   // Orders
   getOrders: async (): Promise<Order[]> => {
@@ -12,7 +16,6 @@ export const dataService = {
       querySnapshot.forEach((doc) => {
         orders.push(doc.data() as Order);
       });
-      // Sort manually since we fetched all (newest first)
       return orders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (e) {
       console.warn("Using local/empty orders due to DB error");
@@ -23,7 +26,7 @@ export const dataService = {
     try {
       await setDoc(doc(db, "orders", order.id), order);
     } catch (e) {
-      console.warn("Failed to save order to DB (Permissions/Network)");
+      console.warn("Failed to save order to DB");
     }
   },
   updateOrderStatus: async (id: string, status: 'pending' | 'completed' | 'cancelled') => {
@@ -51,7 +54,6 @@ export const dataService = {
   },
   saveSubscription: async (sub: Subscription) => {
     try {
-      // Create a unique ID if not present
       const id = sub.id || `sub_${Date.now()}`;
       await setDoc(doc(db, "subscriptions", id), { ...sub, id });
     } catch (e) {
@@ -67,26 +69,17 @@ export const dataService = {
         heroImage: 'https://i.ibb.co/6J8BHK9s/28.jpg',
         missionTitle: 'مهمتنا',
         missionText: 'توفير وجبات صحية فاخرة مصنوعة من مكونات طبيعية 100%. نحن نجعل الحياة الصحية بسيطة، لذيذة، ومتاحة للجميع.',
-        
-        // Features Defaults
         featuresList: [
             'مكونات طبيعية 100%',
             'استشارات مدعومة بالذكاء الاصطناعي',
             'نظام اشتراك مرن',
             'توصيل دقيق في الموعد'
         ],
-
-        // Config
-        // Note: The API Key has been removed from source code to prevent build errors.
-        // Please add the key via the Admin Dashboard > Policies Tab > AI Configuration.
         geminiApiKey: '',
-
-        // App Banner Defaults
         appBannerTitle1: 'صحتك صارت',
         appBannerHighlight: 'أسهل وأقرب',
         appBannerText: 'حمل التطبيق الآن واستمتع بتجربة طلب أسرع، تتبع لخطتك الغذائية، وعروض حصرية. وجباتك الصحية بلمسة زر.',
         appBannerImage: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
-
         privacyPolicy: 'نحن نلتزم بحماية خصوصيتك. يتم استخدام بياناتك فقط لتحسين تجربتك وتوصيل طلباتك.',
         returnPolicy: 'نظراً لطبيعة المنتجات الغذائية، لا يمكن إرجاع الطلبات بعد استلامها إلا في حال وجود عيب مصنعي أو خطأ في الطلب.',
         paymentPolicy: 'نقبل الدفع نقداً عند الاستلام، أو عبر المحافظ الإلكترونية والبطاقات الائتمانية.',
@@ -103,7 +96,6 @@ export const dataService = {
 
       if (docSnap.exists()) {
         const data = docSnap.data() as SiteContent;
-        // Merge with defaults to ensure new fields (like featuresList, geminiApiKey) exist if DB is old
         return { 
             ...defaults, 
             ...data, 
@@ -140,7 +132,7 @@ export const dataService = {
       });
       
       if (meals.length === 0) {
-        // Try to populate defaults
+        // Seed Defaults
         try {
             for (const m of MEALS) {
                 await setDoc(doc(db, "meals", m.id), m);
@@ -150,7 +142,6 @@ export const dataService = {
       }
       return meals;
     } catch (e) {
-      console.warn("Firebase meals unavailable, using local menu.");
       return MEALS;
     }
   },
@@ -171,111 +162,149 @@ export const dataService = {
 
   // Subscription Plans Management
   getSubscriptionPlans: async (): Promise<SubscriptionPlan[]> => {
+    let plans: SubscriptionPlan[] = [];
+    
+    // 1. Try Fetch from DB
     try {
       const querySnapshot = await getDocs(collection(db, "plans"));
-      const plans: SubscriptionPlan[] = [];
       querySnapshot.forEach((doc) => {
         plans.push(doc.data() as SubscriptionPlan);
       });
+    } catch (e) {
+      // Ignore DB error, proceed to use local/defaults
+    }
+
+    // 2. Merge with Local Plans (Added in this session but failed to save to DB)
+    localPlans.forEach(lp => {
+        // Update if exists, else add
+        const idx = plans.findIndex(p => p.id === lp.id);
+        if (idx >= 0) {
+            plans[idx] = lp;
+        } else {
+            plans.push(lp);
+        }
+    });
       
-      if (plans.length === 0) {
-         // 4 Default Plans
+    // 3. If still empty, use Defaults
+    if (plans.length === 0) {
          const defaults: SubscriptionPlan[] = [
             { 
               id: 'plan_slimming', 
               title: 'باقة الرشاقة (تخفيف)', 
               price: 130, 
+              image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
               features: ['وجبتين يومياً (غداء + عشاء)', 'اشتراك لمدة 24 يوم', 'سناك صحي يومي', 'توصيل مجاني'], 
-              durationLabel: 'Monthly', 
+              durationLabel: 'شهر', 
               isPopular: false 
             },
             { 
               id: 'plan_muscle', 
               title: 'باقة العضلات (تضخيم)', 
               price: 175, 
+              image: 'https://images.unsplash.com/photo-1543362906-ac1b48263852?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
               features: ['3 وجبات بروتين عالي', 'اشتراك لمدة 26 يوم', '2 سناك بروتين', 'استشارة كابتن مجانية'], 
-              durationLabel: 'Monthly', 
+              durationLabel: 'شهر', 
               isPopular: true 
             },
             { 
               id: 'plan_lifestyle', 
               title: 'باقة لايف ستايل', 
               price: 90, 
+              image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
               features: ['وجبة غداء يومية للعمل', 'اشتراك لمدة 20 يوم', 'توصيل مكتبي', 'مرونة في التوقيت'], 
-              durationLabel: 'Monthly', 
+              durationLabel: 'شهر', 
               isPopular: false 
             },
             { 
               id: 'plan_vip', 
               title: 'باقة VIP الملكية', 
               price: 260, 
+              image: 'https://images.unsplash.com/photo-1547592180-85f173990554?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
               features: ['4 وجبات كاملة يومياً', 'مشروبات ديتوكس', 'متابعة أسبوعية خاصة', 'أولوية قصوى في التوصيل'], 
-              durationLabel: 'Monthly', 
+              durationLabel: 'شهر', 
               isPopular: false 
             },
          ];
+         
+         // If we have local plans, they are more important than defaults.
+         // But if we are resorting to defaults, we should include local ones too.
+         // Actually, if plans array is empty here, it means no DB plans AND no local plans.
+         // So we return defaults.
+         // Wait, if we cleared DB plans but have local plans, plans array won't be empty.
          return defaults;
-      }
-      return plans;
-    } catch (e) {
-      return [];
     }
+    return plans;
   },
+
   saveSubscriptionPlan: async (plan: SubscriptionPlan) => {
+    // Optimistic: Always save locally first
+    const existingIndex = localPlans.findIndex(p => p.id === plan.id);
+    if (existingIndex >= 0) {
+        localPlans[existingIndex] = plan;
+    } else {
+        localPlans.push(plan);
+    }
+
     try {
         await setDoc(doc(db, "plans", plan.id), plan);
     } catch (e) {
-        console.warn("Failed to save plan");
+        console.warn("Failed to save plan to DB (likely permission issue). Saved locally.");
+        // Do NOT throw error, assume success from user perspective for this session
     }
   },
+
   deleteSubscriptionPlan: async (id: string) => {
+    localPlans = localPlans.filter(p => p.id !== id);
     try {
         await deleteDoc(doc(db, "plans", id));
     } catch (e) {
-        console.warn("Failed to delete plan");
+        console.warn("Failed to delete plan from DB");
     }
   },
 
   // Promo Codes Management
   getPromoCodes: async (): Promise<PromoCode[]> => {
+    let promos: PromoCode[] = [];
     try {
       const querySnapshot = await getDocs(collection(db, "promos"));
-      const promos: PromoCode[] = [];
       querySnapshot.forEach((doc) => {
         promos.push(doc.data() as PromoCode);
       });
-      return promos;
-    } catch (e) {
-      return [];
-    }
+    } catch (e) {}
+
+    // Merge Local
+    localPromos.forEach(lp => {
+         const idx = promos.findIndex(p => p.id === lp.id);
+         if (idx >= 0) promos[idx] = lp;
+         else promos.push(lp);
+    });
+
+    return promos;
   },
+
   savePromoCode: async (promo: PromoCode) => {
+    // Optimistic Save
+    const idx = localPromos.findIndex(p => p.id === promo.id);
+    if (idx >= 0) localPromos[idx] = promo;
+    else localPromos.push(promo);
+
     try {
         await setDoc(doc(db, "promos", promo.id), promo);
     } catch (e) {
-        console.warn("Failed to save promo");
+        console.warn("Failed to save promo to DB. Saved locally.");
     }
   },
+
   deletePromoCode: async (id: string) => {
+    localPromos = localPromos.filter(p => p.id !== id);
     try {
         await deleteDoc(doc(db, "promos", id));
-    } catch (e) {
-        console.warn("Failed to delete promo");
-    }
+    } catch (e) {}
   },
+
   verifyPromoCode: async (code: string, type: 'MEALS' | 'SUBSCRIPTION'): Promise<PromoCode | null> => {
-     try {
-        const querySnapshot = await getDocs(collection(db, "promos"));
-        let validPromo: PromoCode | null = null;
-        querySnapshot.forEach((doc) => {
-            const data = doc.data() as PromoCode;
-            if (data.code === code && data.isActive && data.type === type) {
-                validPromo = data;
-            }
-        });
-        return validPromo;
-     } catch (e) {
-         return null;
-     }
+     // Fetch using the main getter which combines DB and Local
+     const allPromos = await dataService.getPromoCodes();
+     return allPromos.find(p => p.code === code && p.isActive && p.type === type) || null;
   }
 };

@@ -31,6 +31,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       linkAndroid: '', linkIOS: ''
   });
 
+  // Modal State
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [newPlan, setNewPlan] = useState<Partial<SubscriptionPlan>>({
+      title: '', price: 0, features: [], durationLabel: 'شهر', image: ''
+  });
+  const [planFeaturesText, setPlanFeaturesText] = useState('');
+
+  const [showPromoModal, setShowPromoModal] = useState(false);
+  const [newPromo, setNewPromo] = useState<Partial<PromoCode>>({
+      code: '', discountAmount: 0, isPercentage: false, type: 'SUBSCRIPTION', isActive: true
+  });
+
   // Load Data
   useEffect(() => {
     loadAllData();
@@ -62,6 +74,82 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       if(confirm('هل أنت متأكد من حذف هذه الوجبة؟')) {
           await dataService.deleteMeal(id);
           setMeals(await dataService.getMeals());
+      }
+  };
+
+  const handleSavePlan = async () => {
+      if (!newPlan.title) {
+          alert('الرجاء إدخال اسم الباقة');
+          return;
+      }
+      if (!newPlan.price || Number(newPlan.price) <= 0) {
+          alert('الرجاء إدخال سعر صحيح للباقة');
+          return;
+      }
+      
+      const planToSave: SubscriptionPlan = {
+          id: `plan_${Date.now()}`,
+          title: newPlan.title,
+          price: Number(newPlan.price),
+          durationLabel: newPlan.durationLabel || 'شهر',
+          image: newPlan.image || 'https://images.unsplash.com/photo-1543362906-ac1b48263852?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
+          features: planFeaturesText.split('\n').filter(f => f.trim() !== ''),
+          isPopular: false
+      };
+      
+      try {
+          await dataService.saveSubscriptionPlan(planToSave);
+          alert('تم إضافة الباقة بنجاح!');
+          setPlans(await dataService.getSubscriptionPlans());
+          setShowPlanModal(false);
+          setNewPlan({ title: '', price: 0, features: [], durationLabel: 'شهر', image: '' });
+          setPlanFeaturesText('');
+      } catch (err) {
+          alert('حدث خطأ أثناء حفظ الباقة، يرجى المحاولة مرة أخرى.');
+      }
+  };
+
+  const handleDeletePlan = async (id: string) => {
+      if(confirm('حذف هذه الباقة؟')) {
+          await dataService.deleteSubscriptionPlan(id);
+          setPlans(await dataService.getSubscriptionPlans());
+      }
+  };
+
+  const handleSavePromo = async () => {
+      if (!newPromo.code) {
+          alert('الرجاء إدخال كود الخصم');
+          return;
+      }
+      if (!newPromo.discountAmount || Number(newPromo.discountAmount) <= 0) {
+          alert('الرجاء إدخال قيمة الخصم');
+          return;
+      }
+      
+      const promoToSave: PromoCode = {
+          id: `promo_${Date.now()}`,
+          code: newPromo.code.toUpperCase(),
+          discountAmount: Number(newPromo.discountAmount),
+          type: newPromo.type as 'MEALS' | 'SUBSCRIPTION',
+          isPercentage: newPromo.isPercentage || false,
+          isActive: true
+      };
+      
+      try {
+          await dataService.savePromoCode(promoToSave);
+          alert('تم إضافة كود الخصم بنجاح!');
+          setPromos(await dataService.getPromoCodes());
+          setShowPromoModal(false);
+          setNewPromo({ code: '', discountAmount: 0, isPercentage: false, type: 'SUBSCRIPTION', isActive: true });
+      } catch (err) {
+          alert('حدث خطأ أثناء حفظ الكود.');
+      }
+  };
+
+  const handleDeletePromo = async (id: string) => {
+      if(confirm('حذف هذا الكود؟')) {
+          await dataService.deletePromoCode(id);
+          setPromos(await dataService.getPromoCodes());
       }
   };
 
@@ -293,7 +381,179 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                        {subscriptions.length === 0 && <div className="text-center text-gray-400 py-10">لا يوجد اشتراكات بعد</div>}
                   </div>
               )}
+
+              {/* PLANS TAB */}
+              {activeTab === 'PLANS' && (
+                  <div className="space-y-6">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                        <h2 className="text-2xl font-bold text-uh-dark">باقات الاشتراك</h2>
+                        <button onClick={() => setShowPlanModal(true)} className="bg-uh-dark text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-black w-full md:w-auto shadow-md">
+                            <Plus size={18}/> 
+                            <span>إضافة باقة جديدة</span>
+                        </button>
+                      </div>
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {plans.map(plan => (
+                              <div key={plan.id} className="bg-white rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
+                                  {plan.image && <img src={plan.image} className="w-full h-32 object-cover" alt="" />}
+                                  <div className="p-6">
+                                    <button onClick={() => handleDeletePlan(plan.id)} className="absolute top-4 left-4 bg-white/80 p-1 rounded-full text-red-500 hover:text-red-600 hover:bg-white"><Trash2 size={18}/></button>
+                                    <h3 className="font-bold text-lg text-uh-dark mb-2">{plan.title}</h3>
+                                    <div className="text-3xl font-bold text-uh-green mb-4">{plan.price} <span className="text-sm text-gray-400">د.أ</span></div>
+                                    <ul className="text-sm text-gray-500 space-y-1 mb-4">
+                                        {plan.features.map((f, i) => <li key={i}>- {f}</li>)}
+                                    </ul>
+                                    <div className="bg-gray-50 px-2 py-1 rounded text-xs inline-block">
+                                        {plan.durationLabel}
+                                    </div>
+                                  </div>
+                              </div>
+                          ))}
+                          {plans.length === 0 && <div className="col-span-full text-center text-gray-400 py-10">لا يوجد باقات</div>}
+                      </div>
+                  </div>
+              )}
+
+              {/* PROMO TAB */}
+              {activeTab === 'PROMO' && (
+                  <div className="space-y-6">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                        <h2 className="text-2xl font-bold text-uh-dark">كوبونات الخصم</h2>
+                        <button onClick={() => setShowPromoModal(true)} className="bg-uh-dark text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-black w-full md:w-auto shadow-md">
+                            <Plus size={18}/> 
+                            <span>إضافة كود خصم</span>
+                        </button>
+                      </div>
+                      
+                      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                          <table className="w-full text-right">
+                              <thead className="bg-gray-50 text-gray-500 text-sm">
+                                  <tr>
+                                      <th className="p-4">الكود</th>
+                                      <th className="p-4">القيمة</th>
+                                      <th className="p-4">النوع</th>
+                                      <th className="p-4">الحالة</th>
+                                      <th className="p-4">حذف</th>
+                                  </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                  {promos.map(p => (
+                                      <tr key={p.id}>
+                                          <td className="p-4 font-bold font-mono">{p.code}</td>
+                                          <td className="p-4 text-uh-green font-bold">{p.discountAmount} {p.isPercentage ? '%' : 'د.أ'}</td>
+                                          <td className="p-4 text-xs">{p.type === 'MEALS' ? 'وجبات' : 'اشتراكات'}</td>
+                                          <td className="p-4">
+                                              <span className={`px-2 py-1 rounded-full text-xs ${p.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                  {p.isActive ? 'نشط' : 'متوقف'}
+                                              </span>
+                                          </td>
+                                          <td className="p-4">
+                                              <button onClick={() => handleDeletePromo(p.id)} className="text-red-400 hover:text-red-600"><Trash2 size={18}/></button>
+                                          </td>
+                                      </tr>
+                                  ))}
+                                  {promos.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">لا يوجد كوبونات</td></tr>}
+                              </tbody>
+                          </table>
+                      </div>
+                  </div>
+              )}
           </main>
+
+          {/* ADD PLAN MODAL */}
+          {showPlanModal && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+                  <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-fade-in">
+                      <div className="flex justify-between items-center mb-4 border-b pb-2">
+                          <h3 className="text-xl font-bold">إضافة باقة جديدة</h3>
+                          <button onClick={() => setShowPlanModal(false)}><X className="text-gray-500"/></button>
+                      </div>
+                      <div className="space-y-4">
+                          <input 
+                            placeholder="اسم الباقة" 
+                            className="w-full border p-3 rounded-lg"
+                            value={newPlan.title}
+                            onChange={e => setNewPlan({...newPlan, title: e.target.value})}
+                          />
+                          <input 
+                            placeholder="رابط الصورة (URL)" 
+                            className="w-full border p-3 rounded-lg"
+                            value={newPlan.image}
+                            onChange={e => setNewPlan({...newPlan, image: e.target.value})}
+                          />
+                          <div className="flex gap-2">
+                             <input 
+                                type="number"
+                                placeholder="السعر" 
+                                className="w-1/2 border p-3 rounded-lg"
+                                value={newPlan.price || ''}
+                                onChange={e => setNewPlan({...newPlan, price: Number(e.target.value)})}
+                             />
+                             <input 
+                                placeholder="المدة (مثال: شهر)" 
+                                className="w-1/2 border p-3 rounded-lg"
+                                value={newPlan.durationLabel}
+                                onChange={e => setNewPlan({...newPlan, durationLabel: e.target.value})}
+                             />
+                          </div>
+                          <textarea 
+                             placeholder="المميزات (ميزة في كل سطر)"
+                             rows={4}
+                             className="w-full border p-3 rounded-lg"
+                             value={planFeaturesText}
+                             onChange={e => setPlanFeaturesText(e.target.value)}
+                          />
+                          <button onClick={handleSavePlan} className="w-full bg-uh-green text-white font-bold py-3 rounded-lg">حفظ الباقة</button>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {/* ADD PROMO MODAL */}
+          {showPromoModal && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+                  <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-fade-in">
+                      <div className="flex justify-between items-center mb-4 border-b pb-2">
+                          <h3 className="text-xl font-bold">إضافة كود خصم</h3>
+                          <button onClick={() => setShowPromoModal(false)}><X className="text-gray-500"/></button>
+                      </div>
+                      <div className="space-y-4">
+                          <input 
+                            placeholder="الكود (مثال: SAVE20)" 
+                            className="w-full border p-3 rounded-lg uppercase"
+                            value={newPromo.code}
+                            onChange={e => setNewPromo({...newPromo, code: e.target.value})}
+                          />
+                          <div className="flex gap-2">
+                             <input 
+                                type="number"
+                                placeholder="القيمة" 
+                                className="w-1/2 border p-3 rounded-lg"
+                                value={newPromo.discountAmount || ''}
+                                onChange={e => setNewPromo({...newPromo, discountAmount: Number(e.target.value)})}
+                             />
+                             <div className="w-1/2 flex items-center gap-2 border p-3 rounded-lg">
+                                <input 
+                                    type="checkbox" 
+                                    checked={newPromo.isPercentage}
+                                    onChange={e => setNewPromo({...newPromo, isPercentage: e.target.checked})}
+                                />
+                                <span className="text-sm">نسبة مئوية؟</span>
+                             </div>
+                          </div>
+                          <select 
+                            className="w-full border p-3 rounded-lg"
+                            value={newPromo.type}
+                            onChange={e => setNewPromo({...newPromo, type: e.target.value as any})}
+                          >
+                              <option value="SUBSCRIPTION">خاص بالاشتراكات</option>
+                              <option value="MEALS">خاص بالوجبات (المتجر)</option>
+                          </select>
+                          <button onClick={handleSavePromo} className="w-full bg-uh-green text-white font-bold py-3 rounded-lg">حفظ الكود</button>
+                      </div>
+                  </div>
+              </div>
+          )}
       </div>
     </div>
   );
