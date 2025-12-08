@@ -65,6 +65,7 @@ export interface Subscription {
   deliverySlot: DeliverySlot;
   address: string;
   phone: string;
+  notes?: string; // Added notes field
   user?: UserProfile;
   date: string;
   planTitle?: string; // To store snapshot of plan name

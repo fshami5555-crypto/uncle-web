@@ -179,10 +179,40 @@ export const dataService = {
       });
       
       if (plans.length === 0) {
-         // Default Plans if empty
+         // 4 Default Plans
          const defaults: SubscriptionPlan[] = [
-            { id: 'weekly', title: 'أسبوعي', price: 50, features: ['وجبات لمدة 6 أيام', 'توصيل مجاني', 'إمكانية تغيير الوجبات'], durationLabel: 'Weekly', isPopular: false },
-            { id: 'monthly', title: 'شهري', price: 180, features: ['وجبات لمدة 24 يوم', 'توصيل مجاني', 'استشارة مجانية', 'خصم 10%'], durationLabel: 'Monthly', isPopular: true },
+            { 
+              id: 'plan_slimming', 
+              title: 'باقة الرشاقة (تخفيف)', 
+              price: 130, 
+              features: ['وجبتين يومياً (غداء + عشاء)', 'اشتراك لمدة 24 يوم', 'سناك صحي يومي', 'توصيل مجاني'], 
+              durationLabel: 'Monthly', 
+              isPopular: false 
+            },
+            { 
+              id: 'plan_muscle', 
+              title: 'باقة العضلات (تضخيم)', 
+              price: 175, 
+              features: ['3 وجبات بروتين عالي', 'اشتراك لمدة 26 يوم', '2 سناك بروتين', 'استشارة كابتن مجانية'], 
+              durationLabel: 'Monthly', 
+              isPopular: true 
+            },
+            { 
+              id: 'plan_lifestyle', 
+              title: 'باقة لايف ستايل', 
+              price: 90, 
+              features: ['وجبة غداء يومية للعمل', 'اشتراك لمدة 20 يوم', 'توصيل مكتبي', 'مرونة في التوقيت'], 
+              durationLabel: 'Monthly', 
+              isPopular: false 
+            },
+            { 
+              id: 'plan_vip', 
+              title: 'باقة VIP الملكية', 
+              price: 260, 
+              features: ['4 وجبات كاملة يومياً', 'مشروبات ديتوكس', 'متابعة أسبوعية خاصة', 'أولوية قصوى في التوصيل'], 
+              durationLabel: 'Monthly', 
+              isPopular: false 
+            },
          ];
          return defaults;
       }

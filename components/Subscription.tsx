@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Subscription as SubscriptionModel, DeliverySlot, SubscriptionPlan } from '../types';
 import { dataService } from '../services/dataService';
-import { Check, Clock, MapPin, Truck, Tag } from 'lucide-react';
+import { Check, Clock, MapPin, Truck, Tag, Edit3, Phone } from 'lucide-react';
 
 export const Subscription: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -11,7 +11,8 @@ export const Subscription: React.FC = () => {
   const [subData, setSubData] = useState<Partial<SubscriptionModel>>({
     deliverySlot: DeliverySlot.MORNING,
     address: '',
-    phone: ''
+    phone: '',
+    notes: ''
   });
   
   // Promo Logic
@@ -78,6 +79,7 @@ export const Subscription: React.FC = () => {
             deliverySlot: subData.deliverySlot,
             address: subData.address,
             phone: subData.phone,
+            notes: subData.notes, // Save notes
             date: new Date().toISOString(),
             planTitle: selectedPlan.title,
             pricePaid: finalPrice
@@ -88,25 +90,26 @@ export const Subscription: React.FC = () => {
     alert('تم استلام طلب الاشتراك بنجاح! سيتواصل معك فريقنا قريباً.');
     setStep(1);
     setSelectedPlanId(null);
+    setSubData({ deliverySlot: DeliverySlot.MORNING, address: '', phone: '', notes: '' });
   };
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
+    <div className="max-w-4xl mx-auto py-8 mb-20 md:mb-0">
       <div className="text-center mb-12">
         <h2 className="text-3xl font-brand text-uh-dark">اختر باقتك</h2>
         <p className="text-gray-500">وجبات صحية تصلك إلى باب بيتك</p>
       </div>
 
       {step === 1 && (
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-8 animate-fade-in">
           {plans.map(plan => (
             <div key={plan.id} className="bg-white rounded-3xl p-8 shadow-lg border-2 border-transparent hover:border-uh-green transition relative overflow-hidden group flex flex-col">
               {plan.isPopular && (
                   <div className="absolute top-0 right-0 bg-uh-gold text-uh-dark px-4 py-1 rounded-bl-xl text-sm font-bold shadow-sm">الأكثر طلباً</div>
               )}
-              <h3 className="text-2xl font-bold mb-4">{plan.title}</h3>
+              <h3 className="text-2xl font-bold mb-4 text-uh-dark">{plan.title}</h3>
               <div className="text-4xl font-brand text-uh-greenDark mb-6">{plan.price} <span className="text-lg text-gray-400">د.أ</span></div>
               <ul className="space-y-4 mb-8 flex-1">
                 {plan.features.map((f, i) => (
@@ -128,7 +131,7 @@ export const Subscription: React.FC = () => {
       )}
 
       {step === 2 && selectedPlan && (
-        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-2xl mx-auto">
+        <div className="bg-white rounded-3xl shadow-xl p-8 max-w-2xl mx-auto animate-fade-in">
             <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                 <Truck className="text-uh-gold" />
                 تفاصيل الاشتراك: <span className="text-uh-green">{selectedPlan.title}</span>
@@ -137,14 +140,28 @@ export const Subscription: React.FC = () => {
             <form onSubmit={handleDetailsSubmit} className="space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                        <MapPin size={16}/> عنوان التوصيل
+                        <MapPin size={16}/> عنوان التوصيل بالتفصيل
                     </label>
                     <input 
                         required 
                         value={subData.address}
                         onChange={e => setSubData({...subData, address: e.target.value})}
-                        className="w-full border rounded-lg p-3 bg-gray-50" 
-                        placeholder="المدينة، الحي، الشارع..." 
+                        className="w-full border rounded-lg p-3 bg-gray-50 focus:ring-2 focus:ring-uh-green outline-none" 
+                        placeholder="المدينة، الحي، اسم الشارع، رقم البناية..." 
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <Phone size={16}/> رقم الهاتف
+                    </label>
+                    <input 
+                         required
+                         type="tel"
+                         value={subData.phone}
+                         onChange={e => setSubData({...subData, phone: e.target.value})}
+                         className="w-full border rounded-lg p-3 bg-gray-50 focus:ring-2 focus:ring-uh-green outline-none" 
+                         placeholder="079xxxxxxx"
                     />
                 </div>
 
@@ -155,14 +172,14 @@ export const Subscription: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <div 
                             onClick={() => setSubData({...subData, deliverySlot: DeliverySlot.MORNING})}
-                            className={`p-4 border rounded-xl cursor-pointer text-center transition ${subData.deliverySlot === DeliverySlot.MORNING ? 'border-uh-green bg-green-50' : 'hover:bg-gray-50'}`}
+                            className={`p-4 border rounded-xl cursor-pointer text-center transition ${subData.deliverySlot === DeliverySlot.MORNING ? 'border-uh-green bg-green-50 text-uh-greenDark font-bold' : 'hover:bg-gray-50'}`}
                         >
                             <span className="block font-bold">صباحي</span>
                             <span className="text-xs text-gray-500">10:00 - 12:00</span>
                         </div>
                         <div 
                             onClick={() => setSubData({...subData, deliverySlot: DeliverySlot.EVENING})}
-                            className={`p-4 border rounded-xl cursor-pointer text-center transition ${subData.deliverySlot === DeliverySlot.EVENING ? 'border-uh-green bg-green-50' : 'hover:bg-gray-50'}`}
+                            className={`p-4 border rounded-xl cursor-pointer text-center transition ${subData.deliverySlot === DeliverySlot.EVENING ? 'border-uh-green bg-green-50 text-uh-greenDark font-bold' : 'hover:bg-gray-50'}`}
                         >
                             <span className="block font-bold">مسائي</span>
                             <span className="text-xs text-gray-500">15:00 - 17:00</span>
@@ -171,14 +188,15 @@ export const Subscription: React.FC = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">رقم الهاتف للتواصل</label>
-                    <input 
-                         required
-                         type="tel"
-                         value={subData.phone}
-                         onChange={e => setSubData({...subData, phone: e.target.value})}
-                         className="w-full border rounded-lg p-3 bg-gray-50" 
-                         placeholder="079xxxxxxx"
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                        <Edit3 size={16}/> ملاحظات إضافية (اختياري)
+                    </label>
+                    <textarea 
+                         rows={3}
+                         value={subData.notes}
+                         onChange={e => setSubData({...subData, notes: e.target.value})}
+                         className="w-full border rounded-lg p-3 bg-gray-50 focus:ring-2 focus:ring-uh-green outline-none" 
+                         placeholder="هل لديك تعليمات خاصة للتوصيل أو ملاحظات غذائية؟"
                     />
                 </div>
 
@@ -192,7 +210,7 @@ export const Subscription: React.FC = () => {
                             value={promoCode}
                             onChange={e => setPromoCode(e.target.value)}
                             disabled={!!appliedPromo}
-                            className="flex-1 border rounded-lg p-2 uppercase font-mono text-sm"
+                            className="flex-1 border rounded-lg p-2 uppercase font-mono text-sm outline-none"
                             placeholder="CODE"
                         />
                         {appliedPromo ? (

@@ -87,8 +87,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-uh-dark text-white pt-8 pb-20 md:pb-6 mt-8 w-full">
+      {/* Footer - HIDDEN ON MOBILE (hidden md:block) */}
+      <footer className="hidden md:block bg-uh-dark text-white pt-8 pb-6 mt-8 w-full">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6 border-b border-white/10 pb-6 text-center md:text-right">
              <div>
@@ -130,7 +130,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
       </footer>
 
       {/* Mobile Bottom Nav */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] flex justify-around py-3 z-50 text-xs border-t border-gray-100">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] flex justify-between px-6 py-3 z-50 text-xs border-t border-gray-100">
          <div onClick={() => setView('HOME')} className={navItemClass('HOME')}>
             <Home size={20} />
             <span>الرئيسية</span>
@@ -138,6 +138,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
          <div onClick={() => setView('STORE')} className={navItemClass('STORE')}>
             <ShoppingBag size={20} />
             <span>المتجر</span>
+         </div>
+         <div onClick={() => setView('SUBSCRIPTION')} className={navItemClass('SUBSCRIPTION')}>
+            <Calendar size={20} />
+            <span>الاشتراكات</span>
          </div>
          <div onClick={() => setView('CART')} className={`relative ${navItemClass('CART')}`}>
             <ShoppingBag size={20} />
