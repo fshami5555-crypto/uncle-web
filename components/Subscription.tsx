@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Subscription as SubscriptionModel, DeliverySlot, SubscriptionPlan } from '../types';
 import { dataService } from '../services/dataService';
 import { Check, Clock, MapPin, Truck, Tag, Edit3, Phone } from 'lucide-react';
+import { OptimizedImage } from './OptimizedImage';
 
 export const Subscription: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -113,7 +114,7 @@ export const Subscription: React.FC = () => {
             <div key={plan.id} className="bg-white rounded-3xl shadow-lg border-2 border-transparent hover:border-uh-green transition relative overflow-hidden group flex flex-col">
               {plan.image && (
                 <div className="h-48 overflow-hidden">
-                    <img src={plan.image} alt={plan.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                    <OptimizedImage src={plan.image} alt={plan.title} width={600} className="w-full h-full group-hover:scale-105 transition" />
                 </div>
               )}
               

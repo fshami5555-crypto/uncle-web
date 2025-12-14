@@ -95,6 +95,7 @@ export interface Order {
   status: 'pending' | 'completed' | 'cancelled';
   promoCode?: string;
   discountApplied?: number;
+  tax?: number; // Added tax field
 }
 
 export interface SiteContent {

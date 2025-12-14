@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserProfile, Meal } from '../types';
 import { Calendar, User, ChefHat, ShoppingCart, Lock } from 'lucide-react';
+import { OptimizedImage } from './OptimizedImage';
 
 interface ProfileProps {
   user: UserProfile;
@@ -70,7 +71,9 @@ export const Profile: React.FC<ProfileProps> = ({ user, onMealClick, onAddToCart
                             { label: 'عشاء', meal: day.dinner }
                         ].map((item, i) => (
                             <div key={i} className="flex gap-3 items-start bg-uh-cream/30 p-3 rounded-lg hover:bg-uh-cream transition">
-                                <img src={item.meal.image} alt="" className="w-16 h-16 rounded-md object-cover cursor-pointer" onClick={() => onMealClick(item.meal.id)} />
+                                <div className="w-16 h-16 flex-shrink-0 cursor-pointer" onClick={() => onMealClick(item.meal.id)}>
+                                    <OptimizedImage src={item.meal.image} alt="" width={150} className="rounded-md w-full h-full" />
+                                </div>
                                 <div className="flex-1">
                                     <span className="text-xs font-bold text-uh-gold uppercase block">{item.label}</span>
                                     <h5 className="font-bold text-sm text-uh-dark mb-1 cursor-pointer hover:text-uh-green" onClick={() => onMealClick(item.meal.id)}>{item.meal.name}</h5>

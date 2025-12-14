@@ -6,6 +6,7 @@ import { dataService } from '../services/dataService';
 import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap, MessageCircle, Phone, MapPin, Clock } from 'lucide-react';
 import { INITIAL_USER_PROFILE, MEALS } from '../constants';
 import { ImageUploader } from './ImageUploader';
+import { OptimizedImage } from './OptimizedImage';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -144,6 +145,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       }
   };
 
+  // --- PLAN MANAGEMENT FUNCTIONS ---
+
+  const handleOpenAddPlan = () => {
+      setNewPlan({ title: '', price: 0, features: [], durationLabel: 'شهر', image: '' });
+      setPlanFeaturesText('');
+      setShowPlanModal(true);
+  };
+
+  const handleEditPlan = (plan: SubscriptionPlan) => {
+      setNewPlan({ ...plan });
+      setPlanFeaturesText(plan.features.join('\n'));
+      setShowPlanModal(true);
+  };
+
   const handleSavePlan = async () => {
       if (!newPlan.title) {
           alert('الرجاء إدخال اسم الباقة');
@@ -154,19 +169,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           return;
       }
       
+      // Use existing ID if editing, or create new
+      const idToUse = newPlan.id || `plan_${Date.now()}`;
+
       const planToSave: SubscriptionPlan = {
-          id: `plan_${Date.now()}`,
+          id: idToUse,
           title: newPlan.title,
           price: Number(newPlan.price),
           durationLabel: newPlan.durationLabel || 'شهر',
           image: newPlan.image || 'https://images.unsplash.com/photo-1543362906-ac1b48263852?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80',
           features: planFeaturesText.split('\n').filter(f => f.trim() !== ''),
-          isPopular: false
+          isPopular: newPlan.isPopular || false
       };
       
       try {
           await dataService.saveSubscriptionPlan(planToSave);
-          alert('تم إضافة الباقة بنجاح!');
+          alert(newPlan.id ? 'تم تحديث الباقة بنجاح!' : 'تم إضافة الباقة بنجاح!');
           setPlans(await dataService.getSubscriptionPlans());
           setShowPlanModal(false);
           setNewPlan({ title: '', price: 0, features: [], durationLabel: 'شهر', image: '' });
@@ -182,6 +200,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           setPlans(await dataService.getSubscriptionPlans());
       }
   };
+
+  // --- PROMO MANAGEMENT FUNCTIONS ---
 
   const handleSavePromo = async () => {
       if (!newPromo.code) {
@@ -393,7 +413,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                           {meals.map(meal => (
                               <div key={meal.id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 group">
-                                  <img src={meal.image} alt={meal.name} className="h-40 w-full object-cover" />
+                                  <div className="h-40 w-full">
+                                    <OptimizedImage src={meal.image} alt={meal.name} width={300} className="h-full w-full" />
+                                  </div>
                                   <div className="p-4">
                                       <h3 className="font-bold text-uh-dark">{meal.name}</h3>
                                       <p className="text-uh-green font-bold text-sm">{meal.price} د.أ</p>
@@ -585,17 +607,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <div className="space-y-6">
                       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                         <h2 className="text-2xl font-bold text-uh-dark">باقات الاشتراك</h2>
-                        <button onClick={() => setShowPlanModal(true)} className="bg-uh-dark text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-black w-full md:w-auto shadow-md">
+                        <button onClick={handleOpenAddPlan} className="bg-uh-dark text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-black w-full md:w-auto shadow-md">
                             <Plus size={18}/> 
                             <span>إضافة باقة جديدة</span>
                         </button>
                       </div>
                       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                           {plans.map(plan => (
-                              <div key={plan.id} className="bg-white rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
-                                  {plan.image && <img src={plan.image} className="w-full h-32 object-cover" alt="" />}
+                              <div key={plan.id} className="bg-white rounded-xl shadow-sm border border-gray-100 relative overflow-hidden group">
+                                  {plan.image && (
+                                    <div className="h-32 w-full">
+                                        <OptimizedImage src={plan.image} alt="" width={300} className="w-full h-full" />
+                                    </div>
+                                  )}
                                   <div className="p-6">
-                                    <button onClick={() => handleDeletePlan(plan.id)} className="absolute top-4 left-4 bg-white/80 p-1 rounded-full text-red-500 hover:text-red-600 hover:bg-white"><Trash2 size={18}/></button>
+                                    <div className="absolute top-4 left-4 flex gap-2">
+                                        <button onClick={() => handleDeletePlan(plan.id)} className="bg-white/80 p-1.5 rounded-full text-red-500 hover:text-red-600 hover:bg-white shadow-sm transition"><Trash2 size={16}/></button>
+                                        <button onClick={() => handleEditPlan(plan)} className="bg-white/80 p-1.5 rounded-full text-blue-500 hover:text-blue-600 hover:bg-white shadow-sm transition"><Edit size={16}/></button>
+                                    </div>
                                     <h3 className="font-bold text-lg text-uh-dark mb-2">{plan.title}</h3>
                                     <div className="text-3xl font-bold text-uh-green mb-4">{plan.price} <span className="text-sm text-gray-400">د.أ</span></div>
                                     <ul className="text-sm text-gray-500 space-y-1 mb-4">
@@ -658,12 +687,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               )}
           </main>
 
-          {/* ADD PLAN MODAL */}
+          {/* ADD/EDIT PLAN MODAL */}
           {showPlanModal && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
                   <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-fade-in my-8">
                       <div className="flex justify-between items-center mb-4 border-b pb-2">
-                          <h3 className="text-xl font-bold">إضافة باقة جديدة</h3>
+                          <h3 className="text-xl font-bold">{newPlan.id ? 'تعديل الباقة' : 'إضافة باقة جديدة'}</h3>
                           <button onClick={() => setShowPlanModal(false)}><X className="text-gray-500"/></button>
                       </div>
                       <div className="space-y-4">

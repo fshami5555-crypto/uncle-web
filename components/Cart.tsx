@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CartItem, UserProfile } from '../types';
 import { dataService } from '../services/dataService';
 import { Trash2, Plus, Minus, MapPin, Phone, CheckCircle, ArrowLeft, ShoppingBag, Tag } from 'lucide-react';
+import { OptimizedImage } from './OptimizedImage';
 
 interface CartProps {
   items: CartItem[];
@@ -27,8 +28,11 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
   const [discountAmount, setDiscountAmount] = useState(0);
   const [promoMessage, setPromoMessage] = useState('');
 
+  // Calculations
   const subTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const total = Math.max(0, subTotal - discountAmount);
+  const netBeforeTax = Math.max(0, subTotal - discountAmount);
+  const taxAmount = netBeforeTax * 0.16; // 16% Tax
+  const total = netBeforeTax + taxAmount;
 
   useEffect(() => {
     // Fetch contact phone on mount
@@ -81,11 +85,12 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
         id: orderId,
         user: user,
         items: items,
-        total: total,
+        total: Number(total.toFixed(2)),
         address: address,
         phone: phone,
         date: new Date().toISOString(),
         status: 'pending' as const,
+        tax: Number(taxAmount.toFixed(2)),
         ...(appliedPromo && { promoCode: appliedPromo }),
         ...(discountAmount > 0 && { discountApplied: discountAmount })
     };
@@ -115,8 +120,10 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
 🛒 *تفاصيل الطلب:*
 ${itemsList}
 
-${appliedPromo ? `🏷️ خصم (${appliedPromo}): -${discountAmount} د.أ` : ''}
-            
+المجموع الفرعي: ${subTotal.toFixed(2)} د.أ
+${appliedPromo ? `🏷️ خصم (${appliedPromo}): -${discountAmount.toFixed(2)} د.أ` : ''}
+🏛️ ضريبة (16%): ${taxAmount.toFixed(2)} د.أ
+
 💰 *الإجمالي النهائي:* ${total.toFixed(2)} د.أ
             
 يرجى تأكيد الاستلام والتجهيز.`;
@@ -124,7 +131,6 @@ ${appliedPromo ? `🏷️ خصم (${appliedPromo}): -${discountAmount} د.أ` : 
             const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
             
             // Fix for iOS: Use window.location.href instead of window.open
-            // This ensures the navigation is treated as a direct link activation rather than a popup
             window.location.href = url;
         }
 
@@ -172,7 +178,9 @@ ${appliedPromo ? `🏷️ خصم (${appliedPromo}): -${discountAmount} د.أ` : 
         </h2>
         {items.map(item => (
             <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 items-center">
-                <img src={item.image} alt={item.name} className="w-20 h-20 rounded-lg object-cover" />
+                <div className="w-20 h-20 flex-shrink-0">
+                    <OptimizedImage src={item.image} alt={item.name} width={150} className="rounded-lg w-full h-full" />
+                </div>
                 <div className="flex-1">
                     <h3 className="font-bold text-uh-dark">{item.name}</h3>
                     <div className="text-uh-green font-bold">{item.price} د.أ</div>
@@ -202,6 +210,12 @@ ${appliedPromo ? `🏷️ خصم (${appliedPromo}): -${discountAmount} د.أ` : 
                     <span>- {discountAmount.toFixed(2)} د.أ</span>
                 </div>
             )}
+            
+            <div className="flex justify-between items-center text-gray-600 text-sm">
+                <span>ضريبة مبيعات (16%):</span>
+                <span>{taxAmount.toFixed(2)} د.أ</span>
+            </div>
+
             <div className="flex justify-between items-center font-bold text-uh-dark text-lg border-t border-uh-dark/10 pt-2 mt-2">
                 <span>المجموع الكلي:</span>
                 <span>{total.toFixed(2)} د.أ</span>

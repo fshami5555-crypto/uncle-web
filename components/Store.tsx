@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Meal } from '../types';
 import { dataService } from '../services/dataService';
 import { Plus, Flame, Info, Eye } from 'lucide-react';
+import { OptimizedImage } from './OptimizedImage';
 
 interface StoreProps {
   onMealClick: (mealId: string) => void;
@@ -33,11 +34,16 @@ export const Store: React.FC<StoreProps> = ({ onMealClick, onAddToCart }) => {
         {meals.map((meal: Meal) => (
           <div key={meal.id} className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition overflow-hidden border border-gray-100 flex flex-col group">
             <div className="relative h-48 cursor-pointer" onClick={() => onMealClick(meal.id)}>
-              <img src={meal.image} alt={meal.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-              <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-lg text-xs font-bold text-uh-greenDark shadow-sm">
+              <OptimizedImage 
+                src={meal.image} 
+                alt={meal.name} 
+                width={400}
+                className="w-full h-full group-hover:scale-105 transition duration-500" 
+              />
+              <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-lg text-xs font-bold text-uh-greenDark shadow-sm z-10">
                 {meal.macros.calories} سعرة
               </div>
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center z-10">
                   <span className="bg-white text-uh-dark px-4 py-2 rounded-full font-bold flex items-center gap-2 text-sm shadow-lg">
                     <Eye size={16} /> التفاصيل والوصفة
                   </span>

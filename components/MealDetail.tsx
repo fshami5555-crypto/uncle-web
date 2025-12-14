@@ -1,6 +1,7 @@
 import React from 'react';
 import { Meal } from '../types';
 import { ArrowRight, Flame, ChefHat, Info, ShoppingCart } from 'lucide-react';
+import { OptimizedImage } from './OptimizedImage';
 
 interface MealDetailProps {
   meal: Meal;
@@ -13,14 +14,20 @@ export const MealDetail: React.FC<MealDetailProps> = ({ meal, onBack, onAddToCar
     <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden animate-fade-in">
       {/* Header Image */}
       <div className="relative h-64 md:h-80">
-        <img src={meal.image} alt={meal.name} className="w-full h-full object-cover" />
+        <OptimizedImage 
+            src={meal.image} 
+            alt={meal.name} 
+            width={800}
+            className="w-full h-full"
+            priority={true}
+        />
         <button 
             onClick={onBack}
             className="absolute top-4 right-4 bg-white/90 p-2 rounded-full hover:bg-white text-uh-dark shadow-md z-10"
         >
             <ArrowRight size={24} />
         </button>
-        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-6 md:p-8">
+        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-6 md:p-8 z-10">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">{meal.name}</h2>
             <p className="text-gray-200 text-lg">{meal.description}</p>
         </div>

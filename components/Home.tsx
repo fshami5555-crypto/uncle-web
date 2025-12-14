@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { PageView, SiteContent } from '../types';
+import { SiteContent } from '../types';
 import { dataService } from '../services/dataService';
 import { ArrowLeft, CheckCircle, Smartphone, Star, X, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react';
+import { OptimizedImage } from './OptimizedImage';
 
 interface HomeProps {
   onStart: () => void;
@@ -130,10 +131,12 @@ export const Home: React.FC<HomeProps> = ({ onStart }) => {
         {/* Hero Slider Image */}
         <div className="flex-1 relative group w-full max-w-lg mx-auto">
             <div className="relative overflow-hidden rounded-3xl shadow-2xl border-4 border-white rotate-3 group-hover:rotate-0 transition duration-500 h-[350px] md:h-[450px]">
-                <img 
+                <OptimizedImage 
                     src={heroImages[currentHeroIndex]} 
                     alt={`Healthy Meal ${currentHeroIndex + 1}`} 
-                    className="w-full h-full object-cover animate-fade-in transition-all duration-500"
+                    width={800}
+                    priority={true} // Eager load hero
+                    className="w-full h-full"
                     key={currentHeroIndex} // Key forces re-render for animation
                 />
                 
@@ -218,10 +221,11 @@ export const Home: React.FC<HomeProps> = ({ onStart }) => {
          <div className="relative z-10 flex-1 flex justify-center md:justify-end">
             <div className="relative w-64 h-[400px] bg-white rounded-[2.5rem] border-8 border-gray-800 shadow-2xl overflow-hidden transform rotate-[-6deg] group-hover:rotate-0 transition duration-700 ease-out">
                 {/* Screen Content Mockup */}
-                <img 
+                <OptimizedImage 
                     src={appImage} 
                     alt="App Screen" 
-                    className="w-full h-full object-cover"
+                    width={400}
+                    className="w-full h-full"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-6">
                     <div className="flex items-center gap-3 mb-4">
