@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Order, Subscription, SiteContent, Meal, SubscriptionPlan, PromoCode } from '../types';
 import { authService } from '../services/authService';
 import { dataService } from '../services/dataService';
 import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap } from 'lucide-react';
 import { INITIAL_USER_PROFILE, MEALS } from '../constants';
+import { ImageUploader } from './ImageUploader';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -43,6 +45,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       code: '', discountAmount: 0, isPercentage: false, type: 'SUBSCRIPTION', isActive: true
   });
 
+  // Meal Modal State
+  const [showMealModal, setShowMealModal] = useState(false);
+  const [newMeal, setNewMeal] = useState<Partial<Meal>>({
+      name: '', description: '', image: '', price: 0, 
+      macros: { protein: 0, carbs: 0, fats: 0, calories: 0 },
+      ingredients: [], instructions: []
+  });
+  const [mealIngredientsText, setMealIngredientsText] = useState('');
+  const [mealInstructionsText, setMealInstructionsText] = useState('');
+
   // Load Data
   useEffect(() => {
     loadAllData();
@@ -74,6 +86,61 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       if(confirm('هل أنت متأكد من حذف هذه الوجبة؟')) {
           await dataService.deleteMeal(id);
           setMeals(await dataService.getMeals());
+      }
+  };
+
+  const handleEditMeal = (meal: Meal) => {
+      setNewMeal({...meal});
+      setMealIngredientsText(meal.ingredients.join('\n'));
+      setMealInstructionsText(meal.instructions.join('\n'));
+      setShowMealModal(true);
+  };
+
+  const handleOpenAddMeal = () => {
+      setNewMeal({
+         name: '', description: '', image: '', price: 0, 
+         macros: { protein: 0, carbs: 0, fats: 0, calories: 0 },
+         ingredients: [], instructions: []
+      });
+      setMealIngredientsText('');
+      setMealInstructionsText('');
+      setShowMealModal(true);
+  };
+
+  const handleSaveMeal = async () => {
+      if (!newMeal.name || !newMeal.price) {
+          alert('الرجاء إدخال اسم الوجبة والسعر');
+          return;
+      }
+
+      // Check if updating existing or creating new
+      const idToUse = newMeal.id || `m_${Date.now()}`;
+
+      const mealToSave: Meal = {
+          id: idToUse,
+          name: newMeal.name,
+          description: newMeal.description || '',
+          image: newMeal.image || 'https://picsum.photos/400/300',
+          price: Number(newMeal.price),
+          macros: newMeal.macros || { protein: 0, carbs: 0, fats: 0, calories: 0 },
+          ingredients: mealIngredientsText.split('\n').filter(i => i.trim()),
+          instructions: mealInstructionsText.split('\n').filter(i => i.trim())
+      };
+
+      try {
+          await dataService.addMeal(mealToSave);
+          alert(newMeal.id ? 'تم تحديث الوجبة بنجاح!' : 'تم إضافة الوجبة بنجاح!');
+          setMeals(await dataService.getMeals());
+          setShowMealModal(false);
+          setNewMeal({
+             name: '', description: '', image: '', price: 0, 
+             macros: { protein: 0, carbs: 0, fats: 0, calories: 0 },
+             ingredients: [], instructions: []
+          });
+          setMealIngredientsText('');
+          setMealInstructionsText('');
+      } catch (err) {
+          alert('حدث خطأ أثناء حفظ الوجبة');
       }
   };
 
@@ -245,8 +312,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <div className="space-y-6">
                       <div className="flex justify-between items-center">
                         <h2 className="text-2xl font-bold text-uh-dark">قائمة الوجبات</h2>
-                        {/* Note: In a full app, we'd add a modal to create new meals here */}
-                        <button className="bg-uh-dark text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-black"><Plus size={18}/> إضافة وجبة</button>
+                        <button 
+                            onClick={handleOpenAddMeal}
+                            className="bg-uh-dark text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-black"
+                        >
+                            <Plus size={18}/> إضافة وجبة
+                        </button>
                       </div>
                       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                           {meals.map(meal => (
@@ -257,7 +328,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                       <p className="text-uh-green font-bold text-sm">{meal.price} د.أ</p>
                                       <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
                                           <button onClick={() => handleDeleteMeal(meal.id)} className="text-red-500 hover:bg-red-50 p-2 rounded"><Trash2 size={18}/></button>
-                                          <button className="text-blue-500 hover:bg-blue-50 p-2 rounded"><Edit size={18}/></button>
+                                          <button onClick={() => handleEditMeal(meal)} className="text-blue-500 hover:bg-blue-50 p-2 rounded"><Edit size={18}/></button>
                                       </div>
                                   </div>
                               </div>
@@ -303,9 +374,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                               </div>
                           </div>
                           
-                          <div>
-                              <label className="block text-sm font-bold mb-1">نص المهمة (Mission)</label>
-                              <textarea rows={3} value={content.missionText} onChange={e => setContent({...content, missionText: e.target.value})} className="w-full border rounded p-2" />
+                          <div className="grid md:grid-cols-2 gap-6">
+                             <div>
+                                <ImageUploader 
+                                    label="صورة الغلاف (Hero Image)"
+                                    value={content.heroImage}
+                                    onChange={(url) => setContent({...content, heroImage: url})}
+                                />
+                             </div>
+                             <div>
+                                <label className="block text-sm font-bold mb-1">نص المهمة (Mission)</label>
+                                <textarea rows={5} value={content.missionText} onChange={e => setContent({...content, missionText: e.target.value})} className="w-full border rounded p-2" />
+                             </div>
                           </div>
 
                           <div className="bg-gray-50 p-4 rounded-lg space-y-4">
@@ -321,6 +401,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                               <div className="grid md:grid-cols-2 gap-4">
                                   <input value={content.appBannerTitle1} onChange={e => setContent({...content, appBannerTitle1: e.target.value})} className="w-full border rounded p-2" placeholder="عنوان 1 (صحتك صارت)" />
                                   <input value={content.appBannerHighlight} onChange={e => setContent({...content, appBannerHighlight: e.target.value})} className="w-full border rounded p-2" placeholder="النص المميز (أسهل وأقرب)" />
+                                  <div className="col-span-2">
+                                     <ImageUploader 
+                                        label="صورة البانر"
+                                        value={content.appBannerImage || ''}
+                                        onChange={(url) => setContent({...content, appBannerImage: url})}
+                                    />
+                                  </div>
                                   <div className="col-span-2">
                                      <textarea rows={2} value={content.appBannerText} onChange={e => setContent({...content, appBannerText: e.target.value})} className="w-full border rounded p-2" placeholder="وصف البانر" />
                                   </div>
@@ -462,8 +549,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
           {/* ADD PLAN MODAL */}
           {showPlanModal && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-                  <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-fade-in">
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+                  <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-fade-in my-8">
                       <div className="flex justify-between items-center mb-4 border-b pb-2">
                           <h3 className="text-xl font-bold">إضافة باقة جديدة</h3>
                           <button onClick={() => setShowPlanModal(false)}><X className="text-gray-500"/></button>
@@ -475,11 +562,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                             value={newPlan.title}
                             onChange={e => setNewPlan({...newPlan, title: e.target.value})}
                           />
-                          <input 
-                            placeholder="رابط الصورة (URL)" 
-                            className="w-full border p-3 rounded-lg"
-                            value={newPlan.image}
-                            onChange={e => setNewPlan({...newPlan, image: e.target.value})}
+                          <ImageUploader 
+                            label="صورة الباقة"
+                            value={newPlan.image || ''}
+                            onChange={(url) => setNewPlan({...newPlan, image: url})}
                           />
                           <div className="flex gap-2">
                              <input 
@@ -504,6 +590,85 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                              onChange={e => setPlanFeaturesText(e.target.value)}
                           />
                           <button onClick={handleSavePlan} className="w-full bg-uh-green text-white font-bold py-3 rounded-lg">حفظ الباقة</button>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+           {/* ADD MEAL MODAL */}
+           {showMealModal && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+                  <div className="bg-white rounded-2xl w-full max-w-lg p-6 animate-fade-in my-8 max-h-[90vh] overflow-y-auto">
+                      <div className="flex justify-between items-center mb-4 border-b pb-2">
+                          <h3 className="text-xl font-bold">{newMeal.id ? 'تعديل الوجبة' : 'إضافة وجبة جديدة'}</h3>
+                          <button onClick={() => setShowMealModal(false)}><X className="text-gray-500"/></button>
+                      </div>
+                      <div className="space-y-4">
+                          <input 
+                            placeholder="اسم الوجبة" 
+                            className="w-full border p-3 rounded-lg"
+                            value={newMeal.name}
+                            onChange={e => setNewMeal({...newMeal, name: e.target.value})}
+                          />
+                          <textarea 
+                             placeholder="وصف الوجبة"
+                             rows={2}
+                             className="w-full border p-3 rounded-lg"
+                             value={newMeal.description}
+                             onChange={e => setNewMeal({...newMeal, description: e.target.value})}
+                          />
+                          
+                          <ImageUploader 
+                            label="صورة الوجبة"
+                            value={newMeal.image || ''}
+                            onChange={(url) => setNewMeal({...newMeal, image: url})}
+                          />
+
+                          <input 
+                            type="number"
+                            placeholder="السعر (د.أ)" 
+                            className="w-full border p-3 rounded-lg"
+                            value={newMeal.price || ''}
+                            onChange={e => setNewMeal({...newMeal, price: Number(e.target.value)})}
+                          />
+                          
+                          <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                              <div>
+                                  <label className="block mb-1 text-xs">سعرات</label>
+                                  <input type="number" className="w-full border p-2 rounded" value={newMeal.macros?.calories || ''} onChange={e => setNewMeal({...newMeal, macros: {...newMeal.macros!, calories: Number(e.target.value)}})} />
+                              </div>
+                              <div>
+                                  <label className="block mb-1 text-xs">بروتين</label>
+                                  <input type="number" className="w-full border p-2 rounded" value={newMeal.macros?.protein || ''} onChange={e => setNewMeal({...newMeal, macros: {...newMeal.macros!, protein: Number(e.target.value)}})} />
+                              </div>
+                              <div>
+                                  <label className="block mb-1 text-xs">كارب</label>
+                                  <input type="number" className="w-full border p-2 rounded" value={newMeal.macros?.carbs || ''} onChange={e => setNewMeal({...newMeal, macros: {...newMeal.macros!, carbs: Number(e.target.value)}})} />
+                              </div>
+                              <div>
+                                  <label className="block mb-1 text-xs">دهون</label>
+                                  <input type="number" className="w-full border p-2 rounded" value={newMeal.macros?.fats || ''} onChange={e => setNewMeal({...newMeal, macros: {...newMeal.macros!, fats: Number(e.target.value)}})} />
+                              </div>
+                          </div>
+
+                          <textarea 
+                             placeholder="المكونات (كل مكون في سطر)"
+                             rows={3}
+                             className="w-full border p-3 rounded-lg"
+                             value={mealIngredientsText}
+                             onChange={e => setMealIngredientsText(e.target.value)}
+                          />
+                          <textarea 
+                             placeholder="طريقة التحضير (كل خطوة في سطر)"
+                             rows={3}
+                             className="w-full border p-3 rounded-lg"
+                             value={mealInstructionsText}
+                             onChange={e => setMealInstructionsText(e.target.value)}
+                          />
+
+                          <button onClick={handleSaveMeal} className="w-full bg-uh-green text-white font-bold py-3 rounded-lg">
+                              {newMeal.id ? 'حفظ التعديلات' : 'إضافة الوجبة'}
+                          </button>
                       </div>
                   </div>
               </div>
