@@ -3,7 +3,8 @@ import { MEALS } from '../constants';
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
-// In-memory cache for persistence within session if DB writes fail (e.g. permission issues)
+// Local cache only for configuration items (Plans/Promos/Content) to help with seeding if needed,
+// but Orders and Subscriptions will now rely strictly on DB.
 let localPlans: SubscriptionPlan[] = [];
 let localPromos: PromoCode[] = [];
 
@@ -11,54 +12,48 @@ export const dataService = {
   // Orders
   getOrders: async (): Promise<Order[]> => {
     try {
-      const querySnapshot = await getDocs(collection(db, "orders"));
       const orders: Order[] = [];
+      const querySnapshot = await getDocs(collection(db, "orders"));
       querySnapshot.forEach((doc) => {
         orders.push(doc.data() as Order);
       });
       return orders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (e) {
-      console.warn("Using local/empty orders due to DB error");
+      console.error("Failed to fetch orders from DB:", e);
       return [];
     }
   },
+  
   saveOrder: async (order: Order) => {
-    try {
-      await setDoc(doc(db, "orders", order.id), order);
-    } catch (e) {
-      console.warn("Failed to save order to DB");
-    }
+    // Strictly save to DB. If this fails, it will throw an error to be handled by the UI.
+    await setDoc(doc(db, "orders", order.id), order);
   },
+  
   updateOrderStatus: async (id: string, status: 'pending' | 'completed' | 'cancelled') => {
-    try {
-      const orderRef = doc(db, "orders", id);
-      await updateDoc(orderRef, { status: status });
-    } catch (e) {
-      console.warn("Failed to update order status");
-    }
+    const orderRef = doc(db, "orders", id);
+    await updateDoc(orderRef, { status: status });
   },
 
   // Subscriptions
   getSubscriptions: async (): Promise<Subscription[]> => {
     try {
-      const querySnapshot = await getDocs(collection(db, "subscriptions"));
       const subs: Subscription[] = [];
+      const querySnapshot = await getDocs(collection(db, "subscriptions"));
       querySnapshot.forEach((doc) => {
         subs.push(doc.data() as Subscription);
       });
       return subs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (e) {
-      console.warn("Using local/empty subscriptions due to DB error");
+      console.error("Failed to fetch subscriptions from DB:", e);
       return [];
     }
   },
+  
   saveSubscription: async (sub: Subscription) => {
-    try {
-      const id = sub.id || `sub_${Date.now()}`;
-      await setDoc(doc(db, "subscriptions", id), { ...sub, id });
-    } catch (e) {
-      console.warn("Failed to save subscription");
-    }
+    const id = sub.id || `sub_${Date.now()}`;
+    const subWithId = { ...sub, id };
+    // Strictly save to DB.
+    await setDoc(doc(db, "subscriptions", id), subWithId);
   },
 
   // Content
@@ -76,6 +71,7 @@ export const dataService = {
             'توصيل دقيق في الموعد'
         ],
         geminiApiKey: '',
+        contactPhone: '', // Default empty, admin should set it
         appBannerTitle1: 'صحتك صارت',
         appBannerHighlight: 'أسهل وأقرب',
         appBannerText: 'حمل التطبيق الآن واستمتع بتجربة طلب أسرع، تتبع لخطتك الغذائية، وعروض حصرية. وجباتك الصحية بلمسة زر.',
@@ -100,7 +96,8 @@ export const dataService = {
             ...defaults, 
             ...data, 
             featuresList: data.featuresList || defaults.featuresList,
-            geminiApiKey: data.geminiApiKey || defaults.geminiApiKey
+            geminiApiKey: data.geminiApiKey || defaults.geminiApiKey,
+            contactPhone: data.contactPhone || defaults.contactPhone
         };
       } else {
         try { await setDoc(docRef, defaults); } catch(err) {}
@@ -132,7 +129,7 @@ export const dataService = {
       });
       
       if (meals.length === 0) {
-        // Seed Defaults
+        // Seed Defaults to DB if empty
         try {
             for (const m of MEALS) {
                 await setDoc(doc(db, "meals", m.id), m);
@@ -146,18 +143,10 @@ export const dataService = {
     }
   },
   addMeal: async (meal: Meal) => {
-    try {
-        await setDoc(doc(db, "meals", meal.id), meal);
-    } catch (e) {
-        console.warn("Failed to add meal");
-    }
+    await setDoc(doc(db, "meals", meal.id), meal);
   },
   deleteMeal: async (id: string) => {
-    try {
-        await deleteDoc(doc(db, "meals", id));
-    } catch (e) {
-        console.warn("Failed to delete meal");
-    }
+    await deleteDoc(doc(db, "meals", id));
   },
 
   // Subscription Plans Management
@@ -225,12 +214,6 @@ export const dataService = {
               isPopular: false 
             },
          ];
-         
-         // If we have local plans, they are more important than defaults.
-         // But if we are resorting to defaults, we should include local ones too.
-         // Actually, if plans array is empty here, it means no DB plans AND no local plans.
-         // So we return defaults.
-         // Wait, if we cleared DB plans but have local plans, plans array won't be empty.
          return defaults;
     }
     return plans;
@@ -249,7 +232,6 @@ export const dataService = {
         await setDoc(doc(db, "plans", plan.id), plan);
     } catch (e) {
         console.warn("Failed to save plan to DB (likely permission issue). Saved locally.");
-        // Do NOT throw error, assume success from user perspective for this session
     }
   },
 

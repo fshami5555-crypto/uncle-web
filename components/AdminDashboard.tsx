@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { UserProfile, Order, Subscription, SiteContent, Meal, SubscriptionPlan, PromoCode } from '../types';
 import { authService } from '../services/authService';
 import { dataService } from '../services/dataService';
-import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap } from 'lucide-react';
+import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap, MessageCircle, Phone, MapPin, Clock } from 'lucide-react';
 import { INITIAL_USER_PROFILE, MEALS } from '../constants';
 import { ImageUploader } from './ImageUploader';
 
@@ -27,7 +27,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   
   const [content, setContent] = useState<SiteContent>({
       heroTitle: '', heroSubtitle: '', heroImage: '', missionTitle: '', missionText: '', featuresList: [],
-      geminiApiKey: '',
+      geminiApiKey: '', contactPhone: '',
       appBannerTitle1: '', appBannerHighlight: '', appBannerText: '', appBannerImage: '',
       privacyPolicy: '', returnPolicy: '', paymentPolicy: '', socialFacebook: '', socialInstagram: '', socialTwitter: '',
       linkAndroid: '', linkIOS: ''
@@ -272,36 +272,107 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               {activeTab === 'ORDERS' && (
                   <div className="space-y-6">
                       <h2 className="text-2xl font-bold text-uh-dark mb-4">أحدث الطلبات</h2>
-                      <div className="grid gap-4">
-                          {orders.map(order => (
-                              <div key={order.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                  <div>
-                                      <div className="flex items-center gap-2 mb-2">
-                                          <span className="font-bold text-lg text-uh-dark">#{order.id.slice(-6)}</span>
-                                          <span className={`text-xs px-2 py-1 rounded-full ${
-                                              order.status === 'completed' ? 'bg-green-100 text-green-700' : 
-                                              order.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                                          }`}>
-                                              {order.status === 'completed' ? 'مكتمل' : order.status === 'cancelled' ? 'ملغي' : 'قيد الانتظار'}
-                                          </span>
-                                      </div>
-                                      <p className="text-gray-600 text-sm">{order.user.name} | {order.phone}</p>
-                                      <p className="text-gray-500 text-xs mt-1">{new Date(order.date).toLocaleString('ar-EG')}</p>
-                                      <p className="font-bold text-uh-green mt-2">{order.total} د.أ</p>
-                                  </div>
-                                  <div className="flex flex-col items-end gap-2 w-full md:w-auto">
-                                      {order.status === 'pending' && (
-                                          <div className="flex gap-2 w-full md:w-auto">
-                                              <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 text-sm">إكمال</button>
-                                              <button onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')} className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm">إلغاء</button>
+                      <div className="grid gap-6">
+                          {orders.map(order => {
+                              // Ensure Whatsapp link uses international format if starts with 0
+                              const cleanPhone = order.phone.replace(/\D/g, '').replace(/^0/, '962');
+                              const whatsappLink = `https://wa.me/${cleanPhone}`;
+
+                              return (
+                                  <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                      {/* Order Header */}
+                                      <div className="bg-gray-50 p-4 border-b flex flex-wrap justify-between items-center gap-4">
+                                          <div className="flex items-center gap-3">
+                                              <span className="font-bold text-lg text-uh-dark font-mono">#{order.id.slice(-6)}</span>
+                                              <span className="text-xs text-gray-500 flex items-center gap-1">
+                                                  <Clock size={12}/> {new Date(order.date).toLocaleString('ar-EG')}
+                                              </span>
                                           </div>
-                                      )}
-                                      <div className="text-sm text-gray-500 bg-gray-50 p-2 rounded w-full md:w-auto">
-                                          {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
+                                          
+                                          <div className="flex items-center gap-2">
+                                              {order.status === 'pending' && (
+                                                  <div className="flex gap-2">
+                                                      <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="bg-green-500 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 text-xs font-bold flex items-center gap-1">
+                                                          <Check size={12}/> إكمال
+                                                      </button>
+                                                      <button onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')} className="bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 text-xs font-bold flex items-center gap-1">
+                                                          <X size={12}/> إلغاء
+                                                      </button>
+                                                  </div>
+                                              )}
+                                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                                  order.status === 'completed' ? 'bg-green-100 text-green-700' : 
+                                                  order.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                                              }`}>
+                                                  {order.status === 'completed' ? 'مكتمل' : order.status === 'cancelled' ? 'ملغي' : 'قيد الانتظار'}
+                                              </span>
+                                          </div>
+                                      </div>
+
+                                      <div className="p-6 grid md:grid-cols-2 gap-8">
+                                          {/* Customer & Location Details */}
+                                          <div className="space-y-4">
+                                              <h4 className="text-sm font-bold text-gray-400 uppercase border-b pb-2 mb-2">بيانات العميل والتوصيل</h4>
+                                              
+                                              <div className="flex items-start gap-3">
+                                                  <div className="bg-uh-cream p-2 rounded-full"><Users size={18} className="text-uh-dark"/></div>
+                                                  <div>
+                                                      <p className="font-bold text-uh-dark">{order.user.name || 'زائر'}</p>
+                                                      <p className="text-sm text-gray-500">{order.phone}</p>
+                                                      <div className="flex gap-2 mt-2">
+                                                          <a href={`tel:${order.phone}`} className="flex items-center gap-1 bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs hover:bg-blue-100 transition">
+                                                              <Phone size={12}/> اتصال
+                                                          </a>
+                                                          <a href={whatsappLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 bg-green-50 text-green-600 px-3 py-1 rounded text-xs hover:bg-green-100 transition">
+                                                              <MessageCircle size={12}/> واتساب
+                                                          </a>
+                                                      </div>
+                                                  </div>
+                                              </div>
+
+                                              <div className="flex items-start gap-3">
+                                                  <div className="bg-uh-cream p-2 rounded-full"><MapPin size={18} className="text-uh-dark"/></div>
+                                                  <div className="flex-1">
+                                                      <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-100 leading-relaxed">
+                                                          {order.address}
+                                                      </p>
+                                                  </div>
+                                              </div>
+                                          </div>
+
+                                          {/* Order Items & Totals */}
+                                          <div className="space-y-4">
+                                              <h4 className="text-sm font-bold text-gray-400 uppercase border-b pb-2 mb-2">تفاصيل الطلب</h4>
+                                              
+                                              <ul className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                                  {order.items.map((item, idx) => (
+                                                      <li key={idx} className="flex justify-between items-center text-sm border-b border-gray-50 pb-2 last:border-0">
+                                                          <div className="flex items-center gap-2">
+                                                              <span className="bg-gray-100 text-gray-600 w-6 h-6 flex items-center justify-center rounded text-xs font-bold">{item.quantity}x</span>
+                                                              <span className="text-gray-700">{item.name}</span>
+                                                          </div>
+                                                          <span className="font-bold text-gray-900">{(item.price * item.quantity).toFixed(2)}</span>
+                                                      </li>
+                                                  ))}
+                                              </ul>
+
+                                              <div className="bg-gray-50 p-3 rounded-lg space-y-2 text-sm mt-4">
+                                                  {order.discountApplied && (
+                                                      <div className="flex justify-between text-green-600">
+                                                          <span>خصم ({order.promoCode})</span>
+                                                          <span>- {order.discountApplied} د.أ</span>
+                                                      </div>
+                                                  )}
+                                                  <div className="flex justify-between font-bold text-lg text-uh-dark border-t pt-2">
+                                                      <span>الإجمالي النهائي</span>
+                                                      <span>{order.total} د.أ</span>
+                                                  </div>
+                                              </div>
+                                          </div>
                                       </div>
                                   </div>
-                              </div>
-                          ))}
+                              );
+                          })}
                           {orders.length === 0 && <div className="text-center text-gray-400 py-10">لا يوجد طلبات حالياً</div>}
                       </div>
                   </div>
@@ -343,11 +414,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       <h2 className="text-2xl font-bold text-uh-dark mb-6">إدارة المحتوى</h2>
                       <form onSubmit={handleSaveContent} className="space-y-6 bg-white p-6 rounded-xl shadow-sm">
                           
-                          {/* API KEY SECTION */}
-                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                              <h3 className="font-bold border-b border-blue-200 pb-2 mb-4 flex items-center gap-2 text-uh-dark">
+                          {/* API KEY & PHONE SECTION */}
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-4">
+                              <h3 className="font-bold border-b border-blue-200 pb-2 mb-2 flex items-center gap-2 text-uh-dark">
                                   <Zap className="text-uh-gold" fill="currentColor" />
-                                  إعدادات الذكاء الاصطناعي (Gemini)
+                                  الإعدادات الأساسية
                               </h3>
                               <div>
                                   <label className="block text-sm font-bold mb-1 text-gray-700">مفتاح API (Gemini API Key)</label>
@@ -361,8 +432,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                                     />
                                     <Key className="absolute left-3 top-3 text-gray-400" size={18} />
                                   </div>
-                                  <p className="text-xs text-gray-500 mt-2">
-                                      * هام: هذا المفتاح مسؤول عن تشغيل الدردشة الذكية وتوليد الخطط الغذائية. تأكد من نسخه بشكل صحيح من Google AI Studio.
+                              </div>
+                              
+                              <div>
+                                  <label className="block text-sm font-bold mb-1 text-gray-700">رقم واتساب استلام الطلبات</label>
+                                  <div className="relative">
+                                    <input 
+                                        type="tel" 
+                                        value={content.contactPhone || ''} 
+                                        onChange={e => setContent({...content, contactPhone: e.target.value})} 
+                                        className="w-full border border-blue-200 rounded p-3 pl-10 font-mono text-sm bg-white focus:ring-2 focus:ring-blue-300 outline-none" 
+                                        placeholder="079xxxxxxx" 
+                                    />
+                                    <MessageCircle className="absolute left-3 top-3 text-gray-400" size={18} />
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                      * هذا الرقم الذي سيتم تحويل العميل إليه لإرسال تفاصيل الطلب عبر واتساب.
                                   </p>
                               </div>
                           </div>
@@ -452,19 +537,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               {activeTab === 'SUBSCRIPTIONS' && (
                   <div className="space-y-4">
                        <h2 className="text-2xl font-bold text-uh-dark mb-4">الاشتراكات النشطة</h2>
-                       {subscriptions.map(sub => (
-                           <div key={sub.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
-                               <div>
-                                   <div className="font-bold text-lg text-uh-dark">{sub.planTitle}</div>
-                                   <div className="text-gray-500 text-sm">{sub.phone} | {sub.deliverySlot}</div>
-                                   <div className="text-gray-400 text-xs mt-1">{sub.address}</div>
+                       {subscriptions.map(sub => {
+                           // Ensure Whatsapp link uses international format if starts with 0
+                           const cleanPhone = sub.phone.replace(/\D/g, '').replace(/^0/, '962');
+                           const whatsappLink = `https://wa.me/${cleanPhone}`;
+                           
+                           return (
+                               <div key={sub.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                   <div>
+                                       <div className="flex items-center gap-2 mb-1">
+                                            <div className="font-bold text-lg text-uh-dark">{sub.planTitle}</div>
+                                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">نشط</span>
+                                       </div>
+                                       
+                                       <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
+                                            <Phone size={14}/> {sub.phone} | <Clock size={14}/> {sub.deliverySlot}
+                                       </div>
+                                       
+                                       <div className="text-gray-600 text-xs bg-gray-50 p-2 rounded flex gap-2 items-start">
+                                            <MapPin size={14} className="mt-0.5 flex-shrink-0"/> 
+                                            <span>{sub.address}</span>
+                                       </div>
+                                       
+                                       <div className="flex gap-2 mt-3">
+                                            <a href={`tel:${sub.phone}`} className="flex items-center gap-1 bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs hover:bg-blue-100 transition">
+                                                <Phone size={12}/> اتصال
+                                            </a>
+                                            <a href={whatsappLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 bg-green-50 text-green-600 px-3 py-1 rounded text-xs hover:bg-green-100 transition">
+                                                <MessageCircle size={12}/> واتساب
+                                            </a>
+                                       </div>
+                                   </div>
+                                   <div className="text-right border-t md:border-t-0 md:border-r border-gray-100 pt-3 md:pt-0 md:pr-4 w-full md:w-auto mt-2 md:mt-0">
+                                       <span className="block font-bold text-uh-green text-xl mb-1">{sub.pricePaid} د.أ</span>
+                                       <span className="text-xs text-gray-400 block">تاريخ الطلب:</span>
+                                       <span className="text-xs text-gray-600">{new Date(sub.date).toLocaleDateString('ar-EG')}</span>
+                                   </div>
                                </div>
-                               <div className="text-right">
-                                   <span className="block font-bold text-uh-green">{sub.pricePaid} د.أ</span>
-                                   <span className="text-xs text-gray-400">{new Date(sub.date).toLocaleDateString('ar-EG')}</span>
-                               </div>
-                           </div>
-                       ))}
+                           );
+                       })}
                        {subscriptions.length === 0 && <div className="text-center text-gray-400 py-10">لا يوجد اشتراكات بعد</div>}
                   </div>
               )}

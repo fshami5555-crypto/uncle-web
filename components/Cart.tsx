@@ -64,9 +64,9 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
     e.preventDefault();
     setLoading(true);
     
-    // Create Order Object
+    const orderId = `ORD-${Date.now()}`;
     const newOrder = {
-        id: `ORD-${Date.now()}`,
+        id: orderId,
         user: user,
         items: items,
         total: total,
@@ -74,18 +74,55 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
         phone: phone,
         date: new Date().toISOString(),
         status: 'pending' as const,
-        promoCode: appliedPromo || undefined,
-        discountApplied: discountAmount > 0 ? discountAmount : undefined
+        ...(appliedPromo && { promoCode: appliedPromo }),
+        ...(discountAmount > 0 && { discountApplied: discountAmount })
     };
 
-    // Save using data service (async)
-    await dataService.saveOrder(newOrder);
-    setLoading(false);
+    try {
+        // 1. Save to DB
+        await dataService.saveOrder(newOrder);
+        
+        // 2. Fetch Contact Phone
+        const content = await dataService.getContent();
+        const contactPhone = content.contactPhone;
 
-    setIsOrdered(true);
-    setTimeout(() => {
-        onClearCart();
-    }, 5000); 
+        // 3. Send to WhatsApp if phone exists
+        if (contactPhone) {
+            const cleanPhone = contactPhone.replace(/\D/g, '').replace(/^0/, '962');
+            
+            const itemsList = items.map(i => `- ${i.quantity}x ${i.name}`).join('\n');
+            const message = `🔔 *طلب جديد من تطبيق Uncle Healthy*
+            
+رقم الطلب: #${orderId.slice(-6)}
+            
+👤 *معلومات العميل:*
+الاسم: ${user.name || 'زائر'}
+هاتف: ${phone}
+العنوان: ${address}
+            
+🛒 *تفاصيل الطلب:*
+${itemsList}
+
+${appliedPromo ? `🏷️ خصم (${appliedPromo}): -${discountAmount} د.أ` : ''}
+            
+💰 *الإجمالي النهائي:* ${total.toFixed(2)} د.أ
+            
+يرجى تأكيد الاستلام والتجهيز.`;
+
+            const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank');
+        }
+
+        setIsOrdered(true);
+        setTimeout(() => {
+            onClearCart();
+        }, 5000); 
+    } catch (error) {
+        console.error(error);
+        alert("عذراً، حدث خطأ أثناء إرسال الطلب وحفظه في قاعدة البيانات. يرجى التحقق من اتصالك بالإنترنت والمحاولة مجدداً.");
+    } finally {
+        setLoading(false);
+    }
   };
 
   if (isOrdered) {
@@ -95,7 +132,7 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
             <CheckCircle className="text-uh-green w-12 h-12" />
         </div>
         <h2 className="text-3xl font-brand text-uh-dark">تم استلام طلبك!</h2>
-        <p className="text-gray-500">شكراً لك {user.name}، سيصلك طلبك قريباً إلى العنوان المحدد.</p>
+        <p className="text-gray-500">شكراً لك {user.name}، سيتم فتح واتساب لإرسال تفاصيل الطلب للمطعم.</p>
         <button onClick={onBackToStore} className="mt-8 bg-uh-dark text-white px-8 py-3 rounded-xl hover:bg-black transition">
             العودة للمتجر
         </button>
@@ -220,7 +257,7 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
             </div>
 
             <button type="submit" disabled={loading} className="w-full bg-uh-dark text-white font-bold py-4 rounded-xl hover:bg-black transition shadow-md mt-4 flex justify-center items-center gap-2 disabled:opacity-50">
-                {loading ? 'جاري التنفيذ...' : 'تأكيد الطلب'}
+                {loading ? 'جاري التنفيذ...' : 'تأكيد الطلب وإرسال واتساب'}
             </button>
         </form>
       </div>

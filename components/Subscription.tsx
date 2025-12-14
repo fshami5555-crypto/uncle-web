@@ -74,23 +74,28 @@ export const Subscription: React.FC = () => {
     if(subData.address && subData.phone && selectedPlanId && subData.deliverySlot && selectedPlan) {
         const finalPrice = Math.max(0, selectedPlan.price - discount);
         
-        await dataService.saveSubscription({
-            duration: selectedPlan.durationLabel, // Store label for readability
-            deliverySlot: subData.deliverySlot,
-            address: subData.address,
-            phone: subData.phone,
-            notes: subData.notes, // Save notes
-            date: new Date().toISOString(),
-            planTitle: selectedPlan.title,
-            pricePaid: finalPrice
-        });
+        try {
+            await dataService.saveSubscription({
+                duration: selectedPlan.durationLabel, // Store label for readability
+                deliverySlot: subData.deliverySlot,
+                address: subData.address,
+                phone: subData.phone,
+                notes: subData.notes, // Save notes
+                date: new Date().toISOString(),
+                planTitle: selectedPlan.title,
+                pricePaid: finalPrice
+            });
+            alert('تم استلام طلب الاشتراك بنجاح! سيتواصل معك فريقنا قريباً.');
+            setStep(1);
+            setSelectedPlanId(null);
+            setSubData({ deliverySlot: DeliverySlot.MORNING, address: '', phone: '', notes: '' });
+        } catch (error) {
+            console.error(error);
+            alert("عذراً، حدث خطأ أثناء حفظ الاشتراك في قاعدة البيانات. يرجى المحاولة مرة أخرى.");
+        }
     }
 
     setLoading(false);
-    alert('تم استلام طلب الاشتراك بنجاح! سيتواصل معك فريقنا قريباً.');
-    setStep(1);
-    setSelectedPlanId(null);
-    setSubData({ deliverySlot: DeliverySlot.MORNING, address: '', phone: '', notes: '' });
   };
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);

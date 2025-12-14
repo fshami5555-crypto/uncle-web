@@ -111,6 +111,8 @@ export interface SiteContent {
   appBannerHighlight?: string; // "أسهل وأقرب"
   appBannerText?: string;
   appBannerImage?: string; // The screen image
+  // Contact Info
+  contactPhone: string; // The restaurant phone number to receive orders
   // Policies
   privacyPolicy: string;
   returnPolicy: string;
