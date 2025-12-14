@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CartItem, UserProfile } from '../types';
 import { dataService } from '../services/dataService';
 import { Trash2, Plus, Minus, MapPin, Phone, CheckCircle, ArrowLeft, ShoppingBag, Tag } from 'lucide-react';
@@ -18,6 +18,9 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
   const [isOrdered, setIsOrdered] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // Store contact phone locally to avoid async fetch during checkout
+  const [restaurantPhone, setRestaurantPhone] = useState('');
+
   // Promo Logic
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
@@ -26,6 +29,15 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
 
   const subTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const total = Math.max(0, subTotal - discountAmount);
+
+  useEffect(() => {
+    // Fetch contact phone on mount
+    const loadConfig = async () => {
+        const content = await dataService.getContent();
+        setRestaurantPhone(content.contactPhone || '');
+    };
+    loadConfig();
+  }, []);
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
@@ -82,13 +94,13 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
         // 1. Save to DB
         await dataService.saveOrder(newOrder);
         
-        // 2. Fetch Contact Phone
-        const content = await dataService.getContent();
-        const contactPhone = content.contactPhone;
+        // 2. Clear Cart and Show Success immediately
+        setIsOrdered(true);
+        onClearCart();
 
         // 3. Send to WhatsApp if phone exists
-        if (contactPhone) {
-            const cleanPhone = contactPhone.replace(/\D/g, '').replace(/^0/, '962');
+        if (restaurantPhone) {
+            const cleanPhone = restaurantPhone.replace(/\D/g, '').replace(/^0/, '962');
             
             const itemsList = items.map(i => `- ${i.quantity}x ${i.name}`).join('\n');
             const message = `🔔 *طلب جديد من تطبيق Uncle Healthy*
@@ -110,13 +122,12 @@ ${appliedPromo ? `🏷️ خصم (${appliedPromo}): -${discountAmount} د.أ` : 
 يرجى تأكيد الاستلام والتجهيز.`;
 
             const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-            window.open(url, '_blank');
+            
+            // Fix for iOS: Use window.location.href instead of window.open
+            // This ensures the navigation is treated as a direct link activation rather than a popup
+            window.location.href = url;
         }
 
-        setIsOrdered(true);
-        setTimeout(() => {
-            onClearCart();
-        }, 5000); 
     } catch (error) {
         console.error(error);
         alert("عذراً، حدث خطأ أثناء إرسال الطلب وحفظه في قاعدة البيانات. يرجى التحقق من اتصالك بالإنترنت والمحاولة مجدداً.");
@@ -132,7 +143,7 @@ ${appliedPromo ? `🏷️ خصم (${appliedPromo}): -${discountAmount} د.أ` : 
             <CheckCircle className="text-uh-green w-12 h-12" />
         </div>
         <h2 className="text-3xl font-brand text-uh-dark">تم استلام طلبك!</h2>
-        <p className="text-gray-500">شكراً لك {user.name}، سيتم فتح واتساب لإرسال تفاصيل الطلب للمطعم.</p>
+        <p className="text-gray-500">شكراً لك {user.name}، يتم الآن تحويلك إلى واتساب لإرسال التفاصيل...</p>
         <button onClick={onBackToStore} className="mt-8 bg-uh-dark text-white px-8 py-3 rounded-xl hover:bg-black transition">
             العودة للمتجر
         </button>
