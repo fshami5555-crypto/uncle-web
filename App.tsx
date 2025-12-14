@@ -24,6 +24,48 @@ const App: React.FC = () => {
   const [content, setContent] = useState<SiteContent | null>(null);
   const [initialPlanId, setInitialPlanId] = useState<string | null>(null);
 
+  // Helper to update Meta Tags dynamically
+  const updateMetaTags = (title: string, description: string, image: string) => {
+      document.title = title;
+
+      // Update Meta Tags Helper
+      const setMeta = (selector: string, content: string) => {
+          let element = document.querySelector(selector);
+          if (!element) {
+              element = document.createElement('meta');
+              // Guess attribute based on selector
+              if (selector.startsWith('meta[property')) {
+                  element.setAttribute('property', selector.split('"')[1]);
+              } else if (selector.startsWith('meta[name')) {
+                  element.setAttribute('name', selector.split('"')[1]);
+              }
+              document.head.appendChild(element);
+          }
+          element.setAttribute('content', content);
+      };
+
+      // Standard SEO
+      setMeta('meta[name="description"]', description);
+
+      // Open Graph (Facebook/WhatsApp)
+      setMeta('meta[property="og:title"]', title);
+      setMeta('meta[property="og:description"]', description);
+      setMeta('meta[property="og:image"]', image);
+      
+      // Twitter Card
+      setMeta('meta[name="twitter:title"]', title);
+      setMeta('meta[name="twitter:description"]', description);
+      setMeta('meta[name="twitter:image"]', image);
+  };
+
+  const resetMetaTags = () => {
+      updateMetaTags(
+          "Uncle Healthy | منصة الوجبات الصحية الذكية",
+          "انكل هيلثي: وجهتك الأولى للوجبات الصحية الفاخرة المدعومة بالذكاء الاصطناعي. تمتع بخطط غذائية مخصصة.",
+          "https://i.ibb.co/nqmV5jzX/23.png"
+      );
+  };
+
   // Fetch content on mount
   useEffect(() => {
     const fetchContent = async () => {
@@ -46,20 +88,47 @@ const App: React.FC = () => {
               if (meal) {
                   setSelectedMeal(meal);
                   setCurrentView('MEAL_DETAIL');
+                  // Update Meta for Meal
+                  updateMetaTags(
+                      `وجبة ${meal.name} | Uncle Healthy`,
+                      `${meal.description} - ${meal.macros.calories} سعرة حرارية. اطلبها الآن!`,
+                      meal.image
+                  );
+                  return; // Exit to avoid reset
               }
           } else if (planId) {
+              const allPlans = await dataService.getSubscriptionPlans();
+              const plan = allPlans.find(p => p.id === planId);
               setInitialPlanId(planId);
               setCurrentView('SUBSCRIPTION');
+              
+              if (plan) {
+                  // Update Meta for Plan
+                  updateMetaTags(
+                      `اشتراك ${plan.title} | Uncle Healthy`,
+                      `اشترك في ${plan.title} بسعر ${plan.price} د.أ. ${plan.features.slice(0, 2).join('، ')}.`,
+                      plan.image || "https://i.ibb.co/nqmV5jzX/23.png"
+                  );
+                  return;
+              }
           }
+          
+          // If no specific content found or on root
+          resetMetaTags();
       };
 
       handleDeepLinks();
   }, []);
 
-  // Reset scroll on view change
+  // Reset scroll on view change & Meta Tags Logic
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [currentView]);
+
+    // Reset meta tags when returning to main views to prevent stale data
+    if (['HOME', 'STORE', 'SUBSCRIPTION', 'PROFILE', 'CART'].includes(currentView) && !initialPlanId) {
+       resetMetaTags();
+    }
+  }, [currentView, initialPlanId]);
 
   // Auth Handlers
   const handleLogin = (loggedInUser: UserProfile) => {
@@ -119,6 +188,14 @@ const App: React.FC = () => {
     if (meal) {
       setSelectedMeal(meal);
       setCurrentView('MEAL_DETAIL');
+      // Update Meta Tags dynamically when clicking inside the app
+      updateMetaTags(
+          `وجبة ${meal.name} | Uncle Healthy`,
+          `${meal.description} - ${meal.macros.calories} سعرة حرارية.`,
+          meal.image
+      );
+      // Update URL without reloading page for shareability
+      window.history.pushState({}, '', `?mealId=${meal.id}`);
     }
   };
 
@@ -165,7 +242,11 @@ const App: React.FC = () => {
         return selectedMeal ? (
             <MealDetail 
                 meal={selectedMeal} 
-                onBack={() => setCurrentView('STORE')} 
+                onBack={() => {
+                    setCurrentView('STORE');
+                    // Reset URL to clean state
+                    window.history.pushState({}, '', window.location.pathname);
+                }} 
                 onAddToCart={(meal) => {
                     handleAddToCart(meal);
                     setCurrentView('CART'); // Optionally go straight to cart
