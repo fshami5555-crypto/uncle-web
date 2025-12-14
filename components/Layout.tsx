@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { PageView, SiteContent } from '../types';
 import { Menu, User, ShoppingBag, Calendar, Home, LogIn, LogOut, Facebook, Instagram, Twitter, Heart, Smartphone } from 'lucide-react';
@@ -83,7 +84,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow container mx-auto px-4 py-6 w-full relative">
+      <main className="flex-grow container mx-auto px-4 py-6 pb-24 md:pb-6 w-full relative">
         {children}
       </main>
 

@@ -1,10 +1,15 @@
+
 import React, { useState, useEffect } from 'react';
 import { Subscription as SubscriptionModel, DeliverySlot, SubscriptionPlan } from '../types';
 import { dataService } from '../services/dataService';
 import { Check, Clock, MapPin, Truck, Tag, Edit3, Phone } from 'lucide-react';
 import { OptimizedImage } from './OptimizedImage';
 
-export const Subscription: React.FC = () => {
+interface SubscriptionProps {
+    initialPlanId?: string | null;
+}
+
+export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => {
   const [step, setStep] = useState(1);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -30,6 +35,16 @@ export const Subscription: React.FC = () => {
     };
     fetchPlans();
   }, []);
+
+  // Handle Deep Linking / Initial Plan
+  useEffect(() => {
+      if (initialPlanId && plans.length > 0) {
+          const exists = plans.some(p => p.id === initialPlanId);
+          if (exists) {
+              handleSelectPlan(initialPlanId);
+          }
+      }
+  }, [initialPlanId, plans]);
 
   const handleSelectPlan = (id: string) => {
     setSelectedPlanId(id);

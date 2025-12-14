@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { UserProfile, Order, Subscription, SiteContent, Meal, SubscriptionPlan, PromoCode } from '../types';
 import { authService } from '../services/authService';
 import { dataService } from '../services/dataService';
-import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap, MessageCircle, Phone, MapPin, Clock } from 'lucide-react';
+import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap, MessageCircle, Phone, MapPin, Clock, Copy, Link as LinkIcon } from 'lucide-react';
 import { INITIAL_USER_PROFILE, MEALS } from '../constants';
 import { ImageUploader } from './ImageUploader';
 import { OptimizedImage } from './OptimizedImage';
@@ -71,9 +71,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setPromos(await dataService.getPromoCodes());
   };
 
+  // Helper: Copy Link
+  const handleCopyLink = (type: 'mealId' | 'planId', id: string) => {
+      const url = `${window.location.origin}?${type}=${id}`;
+      navigator.clipboard.writeText(url);
+      alert('تم نسخ الرابط المباشر إلى الحافظة!');
+  };
+
   // Actions
   const handleUpdateOrderStatus = async (id: string, status: 'pending' | 'completed' | 'cancelled') => {
+      // 1. Update Status in DB
       await dataService.updateOrderStatus(id, status);
+
+      // 2. Prepare WhatsApp Notification
+      const order = orders.find(o => o.id === id);
+      if (order && (status === 'completed' || status === 'cancelled')) {
+          const cleanPhone = order.phone.replace(/\D/g, '').replace(/^0/, '962');
+          const customerName = order.user.name || 'عميلنا العزيز';
+          const orderRef = order.id.slice(-6);
+          
+          let message = "";
+          
+          if (status === 'completed') {
+              message = `مرحباً ${customerName} 👋\nيسعدنا إخبارك بأن طلبك رقم #${orderRef} من Uncle Healthy قد تم تجهيزه واكتماله! 🍽️✅\nشكراً لثقتك بنا.`;
+          } else if (status === 'cancelled') {
+              message = `مرحباً ${customerName} 👋\nنأسف لإبلاغك بأن طلبك رقم #${orderRef} قد تم إلغاؤه ❌.\nيرجى التواصل معنا للاستفسار.`;
+          }
+          
+          if (message) {
+              const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+              // Open in new tab
+              window.open(url, '_blank');
+          }
+      }
+
+      // 3. Refresh List
       setOrders(await dataService.getOrders());
   };
 
@@ -413,8 +445,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                           {meals.map(meal => (
                               <div key={meal.id} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 group">
-                                  <div className="h-40 w-full">
+                                  <div className="h-40 w-full relative">
                                     <OptimizedImage src={meal.image} alt={meal.name} width={300} className="h-full w-full" />
+                                    <button 
+                                        onClick={() => handleCopyLink('mealId', meal.id)}
+                                        className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full text-uh-dark hover:text-uh-green shadow-sm opacity-0 group-hover:opacity-100 transition"
+                                        title="نسخ رابط الوجبة"
+                                    >
+                                        <LinkIcon size={16} />
+                                    </button>
                                   </div>
                                   <div className="p-4">
                                       <h3 className="font-bold text-uh-dark">{meal.name}</h3>
@@ -616,8 +655,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                           {plans.map(plan => (
                               <div key={plan.id} className="bg-white rounded-xl shadow-sm border border-gray-100 relative overflow-hidden group">
                                   {plan.image && (
-                                    <div className="h-32 w-full">
+                                    <div className="h-32 w-full relative">
                                         <OptimizedImage src={plan.image} alt="" width={300} className="w-full h-full" />
+                                        <button 
+                                            onClick={() => handleCopyLink('planId', plan.id)}
+                                            className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full text-uh-dark hover:text-uh-green shadow-sm opacity-0 group-hover:opacity-100 transition"
+                                            title="نسخ رابط الباقة"
+                                        >
+                                            <LinkIcon size={16} />
+                                        </button>
                                     </div>
                                   )}
                                   <div className="p-6">
@@ -640,53 +686,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       </div>
                   </div>
               )}
-
-              {/* PROMO TAB */}
-              {activeTab === 'PROMO' && (
-                  <div className="space-y-6">
-                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                        <h2 className="text-2xl font-bold text-uh-dark">كوبونات الخصم</h2>
-                        <button onClick={() => setShowPromoModal(true)} className="bg-uh-dark text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-black w-full md:w-auto shadow-md">
-                            <Plus size={18}/> 
-                            <span>إضافة كود خصم</span>
-                        </button>
-                      </div>
-                      
-                      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                          <table className="w-full text-right">
-                              <thead className="bg-gray-50 text-gray-500 text-sm">
-                                  <tr>
-                                      <th className="p-4">الكود</th>
-                                      <th className="p-4">القيمة</th>
-                                      <th className="p-4">النوع</th>
-                                      <th className="p-4">الحالة</th>
-                                      <th className="p-4">حذف</th>
-                                  </tr>
-                              </thead>
-                              <tbody className="divide-y">
-                                  {promos.map(p => (
-                                      <tr key={p.id}>
-                                          <td className="p-4 font-bold font-mono">{p.code}</td>
-                                          <td className="p-4 text-uh-green font-bold">{p.discountAmount} {p.isPercentage ? '%' : 'د.أ'}</td>
-                                          <td className="p-4 text-xs">{p.type === 'MEALS' ? 'وجبات' : 'اشتراكات'}</td>
-                                          <td className="p-4">
-                                              <span className={`px-2 py-1 rounded-full text-xs ${p.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                  {p.isActive ? 'نشط' : 'متوقف'}
-                                              </span>
-                                          </td>
-                                          <td className="p-4">
-                                              <button onClick={() => handleDeletePromo(p.id)} className="text-red-400 hover:text-red-600"><Trash2 size={18}/></button>
-                                          </td>
-                                      </tr>
-                                  ))}
-                                  {promos.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-400">لا يوجد كوبونات</td></tr>}
-                              </tbody>
-                          </table>
-                      </div>
-                  </div>
-              )}
           </main>
-
+          
+          {/* ... Modals (Plan, Meal, Promo) remain unchanged ... */}
           {/* ADD/EDIT PLAN MODAL */}
           {showPlanModal && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">

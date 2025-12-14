@@ -1,6 +1,7 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Meal } from '../types';
-import { ArrowRight, Flame, ChefHat, Info, ShoppingCart } from 'lucide-react';
+import { ArrowRight, Flame, ChefHat, Info, ShoppingCart, Share2, Check } from 'lucide-react';
 import { OptimizedImage } from './OptimizedImage';
 
 interface MealDetailProps {
@@ -10,6 +11,15 @@ interface MealDetailProps {
 }
 
 export const MealDetail: React.FC<MealDetailProps> = ({ meal, onBack, onAddToCart }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = () => {
+      const url = `${window.location.origin}?mealId=${meal.id}`;
+      navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden animate-fade-in">
       {/* Header Image */}
@@ -21,12 +31,23 @@ export const MealDetail: React.FC<MealDetailProps> = ({ meal, onBack, onAddToCar
             className="w-full h-full"
             priority={true}
         />
-        <button 
-            onClick={onBack}
-            className="absolute top-4 right-4 bg-white/90 p-2 rounded-full hover:bg-white text-uh-dark shadow-md z-10"
-        >
-            <ArrowRight size={24} />
-        </button>
+        
+        <div className="absolute top-4 right-4 flex gap-2 z-10">
+            <button 
+                onClick={handleShare}
+                className="bg-white/90 p-2 rounded-full hover:bg-white text-uh-dark shadow-md flex items-center justify-center transition"
+                title="نسخ رابط الوجبة"
+            >
+                {copied ? <Check size={24} className="text-green-600"/> : <Share2 size={24} />}
+            </button>
+            <button 
+                onClick={onBack}
+                className="bg-white/90 p-2 rounded-full hover:bg-white text-uh-dark shadow-md"
+            >
+                <ArrowRight size={24} />
+            </button>
+        </div>
+
         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-6 md:p-8 z-10">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">{meal.name}</h2>
             <p className="text-gray-200 text-lg">{meal.description}</p>

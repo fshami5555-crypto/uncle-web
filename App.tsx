@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { Home } from './components/Home';
@@ -21,6 +22,7 @@ const App: React.FC = () => {
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [content, setContent] = useState<SiteContent | null>(null);
+  const [initialPlanId, setInitialPlanId] = useState<string | null>(null);
 
   // Fetch content on mount
   useEffect(() => {
@@ -29,6 +31,29 @@ const App: React.FC = () => {
         setContent(c);
     };
     fetchContent();
+  }, []);
+
+  // Handle Deep Linking (URL Query Params) on Mount
+  useEffect(() => {
+      const handleDeepLinks = async () => {
+          const params = new URLSearchParams(window.location.search);
+          const mealId = params.get('mealId');
+          const planId = params.get('planId');
+
+          if (mealId) {
+              const allMeals = await dataService.getMeals();
+              const meal = allMeals.find(m => m.id === mealId);
+              if (meal) {
+                  setSelectedMeal(meal);
+                  setCurrentView('MEAL_DETAIL');
+              }
+          } else if (planId) {
+              setInitialPlanId(planId);
+              setCurrentView('SUBSCRIPTION');
+          }
+      };
+
+      handleDeepLinks();
   }, []);
 
   // Reset scroll on view change
@@ -124,7 +149,7 @@ const App: React.FC = () => {
         }
         return <Profile user={user} onMealClick={handleMealClick} onAddToCart={handleAddToCart} />;
       case 'SUBSCRIPTION':
-        return <Subscription />;
+        return <Subscription initialPlanId={initialPlanId} />;
       case 'CART':
         return (
             <Cart 
