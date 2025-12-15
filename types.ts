@@ -127,4 +127,12 @@ export interface SiteContent {
   linkIOS: string;
 }
 
+export interface AnalyticsData {
+  totalVisits: number;
+  androidClicks: number;
+  iosClicks: number;
+  mealViews: Record<string, number>; // mealId: count
+  visitHours: Record<string, number>; // hour(0-23): count
+}
+
 export type PageView = 'HOME' | 'LOGIN' | 'ONBOARDING' | 'STORE' | 'PROFILE' | 'SUBSCRIPTION' | 'MEAL_DETAIL' | 'CART' | 'ADMIN' | 'PRIVACY_POLICY' | 'RETURN_POLICY' | 'PAYMENT_POLICY';

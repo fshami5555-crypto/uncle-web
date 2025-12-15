@@ -32,12 +32,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, setView, currentView, 
       return (
         <div className={`flex items-center gap-3 ${isFooter ? 'justify-center md:justify-start' : 'hidden lg:flex'}`}>
             {content?.linkAndroid && (
-                <a href={content.linkAndroid} target="_blank" rel="noreferrer">
+                <a onClick={() => dataService.logAppClick('android')} href={content.linkAndroid} target="_blank" rel="noreferrer">
                     <img src="https://i.ibb.co/hJnCvx8F/play.png" alt="Get it on Google Play" className={imgClass} />
                 </a>
             )}
             {content?.linkIOS && (
-                <a href={content.linkIOS} target="_blank" rel="noreferrer">
+                <a onClick={() => dataService.logAppClick('ios')} href={content.linkIOS} target="_blank" rel="noreferrer">
                     <img src="https://i.ibb.co/0RTdQBk3/play-1.png" alt="Download on the App Store" className={imgClass} />
                 </a>
             )}

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { SiteContent } from '../types';
 import { dataService } from '../services/dataService';
@@ -202,12 +203,12 @@ export const Home: React.FC<HomeProps> = ({ onStart }) => {
             {/* Download Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 pt-4">
                 {content?.linkAndroid && (
-                    <a href={content.linkAndroid} target="_blank" rel="noreferrer" className="transform transition hover:-translate-y-1 hover:shadow-lg hover:brightness-110">
+                    <a onClick={() => dataService.logAppClick('android')} href={content.linkAndroid} target="_blank" rel="noreferrer" className="transform transition hover:-translate-y-1 hover:shadow-lg hover:brightness-110">
                         <img src="https://i.ibb.co/hJnCvx8F/play.png" alt="Google Play" className="h-14 w-auto" />
                     </a>
                 )}
                 {content?.linkIOS && (
-                    <a href={content.linkIOS} target="_blank" rel="noreferrer" className="transform transition hover:-translate-y-1 hover:shadow-lg hover:brightness-110">
+                    <a onClick={() => dataService.logAppClick('ios')} href={content.linkIOS} target="_blank" rel="noreferrer" className="transform transition hover:-translate-y-1 hover:shadow-lg hover:brightness-110">
                         <img src="https://i.ibb.co/0RTdQBk3/play-1.png" alt="App Store" className="h-14 w-auto" />
                     </a>
                 )}

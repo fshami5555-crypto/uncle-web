@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Meal } from '../types';
 import { ArrowRight, Flame, ChefHat, Info, ShoppingCart, Share2, Check } from 'lucide-react';
 import { OptimizedImage } from './OptimizedImage';
+import { dataService } from '../services/dataService';
 
 interface MealDetailProps {
   meal: Meal;
@@ -12,6 +13,11 @@ interface MealDetailProps {
 
 export const MealDetail: React.FC<MealDetailProps> = ({ meal, onBack, onAddToCart }) => {
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+      // Log Analytics View
+      dataService.logMealView(meal.id);
+  }, [meal.id]);
 
   const handleShare = () => {
       const url = `${window.location.origin}?mealId=${meal.id}`;

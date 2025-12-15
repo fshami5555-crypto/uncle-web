@@ -27,13 +27,10 @@ const App: React.FC = () => {
   // Helper to update Meta Tags dynamically
   const updateMetaTags = (title: string, description: string, image: string) => {
       document.title = title;
-
-      // Update Meta Tags Helper
       const setMeta = (selector: string, content: string) => {
           let element = document.querySelector(selector);
           if (!element) {
               element = document.createElement('meta');
-              // Guess attribute based on selector
               if (selector.startsWith('meta[property')) {
                   element.setAttribute('property', selector.split('"')[1]);
               } else if (selector.startsWith('meta[name')) {
@@ -43,16 +40,10 @@ const App: React.FC = () => {
           }
           element.setAttribute('content', content);
       };
-
-      // Standard SEO
       setMeta('meta[name="description"]', description);
-
-      // Open Graph (Facebook/WhatsApp)
       setMeta('meta[property="og:title"]', title);
       setMeta('meta[property="og:description"]', description);
       setMeta('meta[property="og:image"]', image);
-      
-      // Twitter Card
       setMeta('meta[name="twitter:title"]', title);
       setMeta('meta[name="twitter:description"]', description);
       setMeta('meta[name="twitter:image"]', image);
@@ -66,11 +57,13 @@ const App: React.FC = () => {
       );
   };
 
-  // Fetch content on mount
+  // Fetch content on mount and Track Visit
   useEffect(() => {
     const fetchContent = async () => {
         const c = await dataService.getContent();
         setContent(c);
+        // Log visit
+        dataService.logVisit();
     };
     fetchContent();
   }, []);
@@ -88,22 +81,19 @@ const App: React.FC = () => {
               if (meal) {
                   setSelectedMeal(meal);
                   setCurrentView('MEAL_DETAIL');
-                  // Update Meta for Meal
                   updateMetaTags(
                       `وجبة ${meal.name} | Uncle Healthy`,
                       `${meal.description} - ${meal.macros.calories} سعرة حرارية. اطلبها الآن!`,
                       meal.image
                   );
-                  return; // Exit to avoid reset
+                  return;
               }
           } else if (planId) {
               const allPlans = await dataService.getSubscriptionPlans();
               const plan = allPlans.find(p => p.id === planId);
               setInitialPlanId(planId);
               setCurrentView('SUBSCRIPTION');
-              
               if (plan) {
-                  // Update Meta for Plan
                   updateMetaTags(
                       `اشتراك ${plan.title} | Uncle Healthy`,
                       `اشترك في ${plan.title} بسعر ${plan.price} د.أ. ${plan.features.slice(0, 2).join('، ')}.`,
@@ -112,19 +102,14 @@ const App: React.FC = () => {
                   return;
               }
           }
-          
-          // If no specific content found or on root
           resetMetaTags();
       };
-
       handleDeepLinks();
   }, []);
 
   // Reset scroll on view change & Meta Tags Logic
   useEffect(() => {
     window.scrollTo(0, 0);
-
-    // Reset meta tags when returning to main views to prevent stale data
     if (['HOME', 'STORE', 'SUBSCRIPTION', 'PROFILE', 'CART'].includes(currentView) && !initialPlanId) {
        resetMetaTags();
     }
@@ -148,7 +133,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setUser(INITIAL_USER_PROFILE);
     setCurrentView('HOME');
-    setCart([]); // Optional: Clear cart on logout
+    setCart([]);
   };
 
   // Cart Handlers
@@ -160,7 +145,6 @@ const App: React.FC = () => {
         }
         return [...prev, { ...meal, quantity: 1 }];
     });
-    // Optional: could show toast notification
   };
 
   const handleUpdateCartQuantity = (id: string, delta: number) => {
@@ -183,35 +167,28 @@ const App: React.FC = () => {
 
   // Navigation Handlers
   const handleMealClick = async (mealId: string) => {
-    const allMeals = await dataService.getMeals(); // Get latest from service (async)
+    const allMeals = await dataService.getMeals();
     const meal = allMeals.find(m => m.id === mealId);
     if (meal) {
       setSelectedMeal(meal);
       setCurrentView('MEAL_DETAIL');
-      // Update Meta Tags dynamically when clicking inside the app
       updateMetaTags(
           `وجبة ${meal.name} | Uncle Healthy`,
           `${meal.description} - ${meal.macros.calories} سعرة حرارية.`,
           meal.image
       );
-      // Update URL without reloading page for shareability
       window.history.pushState({}, '', `?mealId=${meal.id}`);
     }
   };
 
   const renderView = () => {
-    // If content hasn't loaded yet, we can show a loader or fallback
-    // But StaticPage handles inputs, so if null, we just pass defaults inside logic or ensure content is not null
     const safeContent = content || {
-        privacyPolicy: '',
-        returnPolicy: '',
-        paymentPolicy: '',
+        privacyPolicy: '', returnPolicy: '', paymentPolicy: '',
         heroTitle: '', heroSubtitle: '', heroImage: '', missionTitle: '', missionText: '', socialFacebook: '', socialInstagram: '', socialTwitter: ''
     };
 
     switch (currentView) {
       case 'HOME':
-        // Modified: onStart now goes directly to ONBOARDING for new users instead of Login
         return <Home onStart={() => setCurrentView(user.hasProfile ? 'PROFILE' : 'ONBOARDING')} />;
       case 'LOGIN':
         return <Login onLogin={handleLogin} onGoToSignup={() => setCurrentView('ONBOARDING')} />;
@@ -220,7 +197,6 @@ const App: React.FC = () => {
       case 'STORE':
         return <Store onMealClick={handleMealClick} onAddToCart={handleAddToCart} />;
       case 'PROFILE':
-         // If user tries to access profile without login, send to login
         if (!user.hasProfile) {
             return <Login onLogin={handleLogin} onGoToSignup={() => setCurrentView('ONBOARDING')} />;
         }
@@ -244,17 +220,15 @@ const App: React.FC = () => {
                 meal={selectedMeal} 
                 onBack={() => {
                     setCurrentView('STORE');
-                    // Reset URL to clean state
                     window.history.pushState({}, '', window.location.pathname);
                 }} 
                 onAddToCart={(meal) => {
                     handleAddToCart(meal);
-                    setCurrentView('CART'); // Optionally go straight to cart
+                    setCurrentView('CART');
                 }}
             />
         ) : <Store onMealClick={handleMealClick} onAddToCart={handleAddToCart} />;
       
-      // Legal Pages
       case 'PRIVACY_POLICY':
         return <StaticPage title="سياسة الاستخدام والخصوصية" content={safeContent.privacyPolicy} type="PRIVACY" onBack={() => setCurrentView('HOME')} />;
       case 'RETURN_POLICY':
@@ -272,12 +246,10 @@ const App: React.FC = () => {
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // If Admin, render Dashboard without Layout wrapper (full screen dashboard)
   if (currentView === 'ADMIN') {
       return renderView();
   }
 
-  // Regular View
   return (
     <>
       <Layout 
@@ -289,7 +261,6 @@ const App: React.FC = () => {
       >
         {renderView()}
       </Layout>
-      {/* ChatWidget outside Layout to ensure fixed positioning works correctly relative to viewport */}
       <ChatWidget />
     </>
   );

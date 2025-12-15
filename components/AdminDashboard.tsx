@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile, Order, Subscription, SiteContent, Meal, SubscriptionPlan, PromoCode } from '../types';
+import { UserProfile, Order, Subscription, SiteContent, Meal, SubscriptionPlan, PromoCode, AnalyticsData } from '../types';
 import { authService } from '../services/authService';
 import { dataService } from '../services/dataService';
-import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap, MessageCircle, Phone, MapPin, Clock, Copy, Link as LinkIcon } from 'lucide-react';
+import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap, MessageCircle, Phone, MapPin, Clock, Copy, Link as LinkIcon, BarChart2, TrendingUp, Download, Eye, PieChart } from 'lucide-react';
 import { INITIAL_USER_PROFILE, MEALS } from '../constants';
 import { ImageUploader } from './ImageUploader';
 import { OptimizedImage } from './OptimizedImage';
@@ -12,10 +12,70 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-type Tab = 'ORDERS' | 'STORE' | 'USERS' | 'CONTENT' | 'SUBSCRIPTIONS' | 'PLANS' | 'PROMO';
+type Tab = 'STATISTICS' | 'ORDERS' | 'STORE' | 'USERS' | 'CONTENT' | 'SUBSCRIPTIONS' | 'PLANS' | 'PROMO';
+
+// Simple SVG Bar Chart Component for Statistics
+const SimpleBarChart: React.FC<{ data: { label: string, value: number }[], height?: number, color?: string }> = ({ data, height = 150, color = "#a8c038" }) => {
+    const maxVal = Math.max(...data.map(d => d.value), 1);
+    return (
+        <div className="flex items-end gap-1 w-full" style={{ height: `${height}px` }}>
+            {data.map((d, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center group relative">
+                    <div 
+                        className="w-full rounded-t-sm transition-all duration-500 hover:opacity-80"
+                        style={{ height: `${(d.value / maxVal) * 100}%`, backgroundColor: color }}
+                    >
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition z-10 whitespace-nowrap">
+                            {d.value} زيارة
+                        </div>
+                    </div>
+                    <span className="text-[10px] text-gray-400 mt-1 rotate-0 md:rotate-0 truncate w-full text-center">{d.label}</span>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// Simple Pie/Donut Chart Component
+const SimpleDonutChart: React.FC<{ data: { label: string, value: number, color: string }[], total: number }> = ({ data, total }) => {
+    let cumulativePercent = 0;
+
+    const getCoordinatesForPercent = (percent: number) => {
+        const x = Math.cos(2 * Math.PI * percent);
+        const y = Math.sin(2 * Math.PI * percent);
+        return [x, y];
+    };
+
+    return (
+        <div className="relative w-40 h-40 mx-auto">
+            <svg viewBox="-1 -1 2 2" className="transform -rotate-90 w-full h-full">
+                {data.map((slice, i) => {
+                    const percent = slice.value / total;
+                    if (percent === 0) return null;
+                    const start = cumulativePercent;
+                    cumulativePercent += percent;
+                    const [startX, startY] = getCoordinatesForPercent(start);
+                    const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+                    const largeArcFlag = percent > 0.5 ? 1 : 0;
+                    const pathData = `M 0 0 L ${startX} ${startY} A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
+                    
+                    return (
+                        <path key={i} d={pathData} fill={slice.color} className="hover:opacity-80 transition" />
+                    );
+                })}
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                 <div className="bg-white w-20 h-20 rounded-full flex flex-col items-center justify-center shadow-inner">
+                     <span className="text-xl font-bold text-uh-dark">{total}</span>
+                     <span className="text-[10px] text-gray-400">طلب</span>
+                 </div>
+            </div>
+        </div>
+    );
+};
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('ORDERS');
+  const [activeTab, setActiveTab] = useState<Tab>('STATISTICS');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   
   // Data State
@@ -25,6 +85,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [promos, setPromos] = useState<PromoCode[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+      totalVisits: 0, androidClicks: 0, iosClicks: 0, mealViews: {}, visitHours: {}
+  });
   
   const [content, setContent] = useState<SiteContent>({
       heroTitle: '', heroSubtitle: '', heroImage: '', missionTitle: '', missionText: '', featuresList: [],
@@ -69,6 +132,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setContent(await dataService.getContent());
     setPlans(await dataService.getSubscriptionPlans());
     setPromos(await dataService.getPromoCodes());
+    setAnalytics(await dataService.getAnalytics());
   };
 
   // Helper: Copy Link
@@ -201,7 +265,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           return;
       }
       
-      // Use existing ID if editing, or create new
       const idToUse = newPlan.id || `plan_${Date.now()}`;
 
       const planToSave: SubscriptionPlan = {
@@ -272,6 +335,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       }
   };
 
+  // Analytics Helpers
+  const prepareHourlyData = () => {
+      const hours = analytics?.visitHours || {};
+      // 0-23 hours
+      return Array.from({ length: 24 }).map((_, i) => ({
+          label: i.toString() + ':00',
+          value: hours[String(i)] || 0
+      }));
+  };
+
+  const prepareMealViews = () => {
+      const viewsMap = analytics?.mealViews || {};
+      const views = Object.entries(viewsMap).map(([id, count]) => {
+          const meal = meals.find(m => m.id === id);
+          return { name: meal?.name || id, count: Number(count), image: meal?.image };
+      });
+      return views.sort((a, b) => b.count - a.count).slice(0, 5); // Top 5
+  };
+
+  const getOrderStatusCounts = () => {
+      const pending = orders.filter(o => o.status === 'pending').length;
+      const completed = orders.filter(o => o.status === 'completed').length;
+      const cancelled = orders.filter(o => o.status === 'cancelled').length;
+      return [
+          { label: 'مكتمل', value: completed, color: '#a8c038' }, // Green
+          { label: 'ملغي', value: cancelled, color: '#ef4444' }, // Red
+          { label: 'انتظار', value: pending, color: '#f1b71c' }, // Gold
+      ];
+  };
+
   // Render Helpers
   const renderSidebarItem = (tab: Tab, label: string, Icon: any) => (
       <button 
@@ -292,6 +385,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
              <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-400"><X /></button>
          </div>
          <nav className="p-4 space-y-2 overflow-y-auto h-[calc(100vh-80px)]">
+             {renderSidebarItem('STATISTICS', 'الإحصائيات', BarChart2)}
              {renderSidebarItem('ORDERS', 'الطلبات', ShoppingBag)}
              {renderSidebarItem('SUBSCRIPTIONS', 'الاشتراكات', Calendar)}
              {renderSidebarItem('STORE', 'إدارة الوجبات', Package)}
@@ -319,6 +413,124 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
           {/* Scrollable Content Area */}
           <main className="flex-1 overflow-y-auto p-4 md:p-8">
+
+              {/* STATISTICS TAB */}
+              {activeTab === 'STATISTICS' && (
+                  <div className="space-y-8 animate-fade-in">
+                      <div className="flex justify-between items-center">
+                          <h2 className="text-2xl font-bold text-uh-dark">ملخص الأداء</h2>
+                          <button onClick={loadAllData} className="text-sm bg-white p-2 rounded shadow text-gray-500 hover:text-uh-dark"><TrendingUp size={16}/></button>
+                      </div>
+
+                      {/* Top Cards */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                              <div className="text-gray-500 text-xs mb-1">إجمالي الزيارات</div>
+                              <div className="text-2xl font-bold text-uh-dark flex items-center gap-2">
+                                  {analytics?.totalVisits || 0} <Eye size={16} className="text-blue-500"/>
+                              </div>
+                          </div>
+                          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                              <div className="text-gray-500 text-xs mb-1">المستخدمين</div>
+                              <div className="text-2xl font-bold text-uh-dark flex items-center gap-2">
+                                  {users.length} <Users size={16} className="text-uh-green"/>
+                              </div>
+                          </div>
+                          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                              <div className="text-gray-500 text-xs mb-1">إجمالي الطلبات</div>
+                              <div className="text-2xl font-bold text-uh-dark flex items-center gap-2">
+                                  {orders.length} <ShoppingBag size={16} className="text-uh-gold"/>
+                              </div>
+                          </div>
+                          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                              <div className="text-gray-500 text-xs mb-1">تحميل التطبيق</div>
+                              <div className="text-2xl font-bold text-uh-dark flex items-center gap-2">
+                                  {Number(analytics?.androidClicks || 0) + Number(analytics?.iosClicks || 0)} <Download size={16} className="text-purple-500"/>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-3 gap-6">
+                          {/* Visit Times Chart */}
+                          <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                              <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2">
+                                  <Clock size={18} className="text-uh-gold" />
+                                  أوقات الذروة (زيارات بالساعة)
+                              </h3>
+                              <SimpleBarChart data={prepareHourlyData()} />
+                          </div>
+
+                          {/* Order Status Donut */}
+                          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                              <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2">
+                                  <PieChart size={18} className="text-uh-gold" />
+                                  حالة الطلبات
+                              </h3>
+                              <div className="flex flex-col items-center">
+                                <SimpleDonutChart data={getOrderStatusCounts()} total={orders.length} />
+                                <div className="mt-6 w-full space-y-2">
+                                    {getOrderStatusCounts().map((s, i) => (
+                                        <div key={i} className="flex justify-between text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full" style={{background: s.color}}></span>
+                                                {s.label}
+                                            </div>
+                                            <span className="font-bold">{s.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-6">
+                          {/* Top Meals */}
+                          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                              <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                  <TrendingUp size={18} className="text-uh-gold" />
+                                  أكثر الوجبات مشاهدة
+                              </h3>
+                              <div className="space-y-4">
+                                  {prepareMealViews().map((item, idx) => (
+                                      <div key={idx} className="flex items-center gap-4 border-b border-gray-50 pb-2 last:border-0">
+                                          <div className="font-bold text-gray-300 w-4">#{idx+1}</div>
+                                          {item.image ? (
+                                              <img src={item.image} className="w-10 h-10 rounded-lg object-cover bg-gray-100" alt="" />
+                                          ) : <div className="w-10 h-10 bg-gray-100 rounded-lg"></div>}
+                                          <div className="flex-1 font-bold text-sm text-uh-dark">{item.name}</div>
+                                          <div className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">{item.count} مشاهدة</div>
+                                      </div>
+                                  ))}
+                                  {prepareMealViews().length === 0 && <p className="text-gray-400 text-sm text-center">لا يوجد بيانات كافية</p>}
+                              </div>
+                          </div>
+
+                          {/* App Downloads Stats */}
+                          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                              <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                  <Smartphone size={18} className="text-uh-gold" />
+                                  نقرات التحميل
+                              </h3>
+                              <div className="space-y-4">
+                                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                      <div className="flex items-center gap-3">
+                                          <img src="https://i.ibb.co/hJnCvx8F/play.png" className="h-8 w-auto grayscale opacity-80" alt="Google Play" />
+                                          <span className="font-bold text-sm">Google Play</span>
+                                      </div>
+                                      <span className="text-xl font-bold text-uh-green">{analytics?.androidClicks || 0}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                      <div className="flex items-center gap-3">
+                                          <img src="https://i.ibb.co/0RTdQBk3/play-1.png" className="h-8 w-auto grayscale opacity-80" alt="App Store" />
+                                          <span className="font-bold text-sm">App Store</span>
+                                      </div>
+                                      <span className="text-xl font-bold text-uh-dark">{analytics?.iosClicks || 0}</span>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
               
               {/* ORDERS TAB */}
               {activeTab === 'ORDERS' && (
