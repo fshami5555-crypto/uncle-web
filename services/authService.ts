@@ -1,3 +1,4 @@
+
 import { UserProfile } from '../types';
 import { db } from './firebase';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
@@ -16,7 +17,7 @@ export const authService = {
 
   // Find user by phone (or admin email) and password
   login: async (identifier: string, password: string): Promise<UserProfile | null> => {
-    // Admin Check (Hidden credentials)
+    // Admin Check
     if (identifier === 'admin@uncle.com' && password === '00000000') {
         return {
             id: 'admin',
@@ -24,6 +25,30 @@ export const authService = {
             phone: '00000000',
             hasProfile: true,
             isAdmin: true,
+            age: '', gender: '', height: '', weight: '', goal: '', allergies: ''
+        };
+    }
+
+    // Chef Check
+    if (identifier === 'chef@uncle.com' && password === '00000000') {
+        return {
+            id: 'chef',
+            name: 'الشيف الرئيسي',
+            phone: '00000000',
+            hasProfile: true,
+            isChef: true,
+            age: '', gender: '', height: '', weight: '', goal: '', allergies: ''
+        };
+    }
+
+    // Employee Check
+    if (identifier === 'self@uncle.com' && password === '00000000') {
+        return {
+            id: 'employee_01',
+            name: 'موظف انكل',
+            phone: '00000000',
+            hasProfile: true,
+            isEmployee: true,
             age: '', gender: '', height: '', weight: '', goal: '', allergies: ''
         };
     }

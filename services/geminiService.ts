@@ -1,19 +1,20 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Meal, UserProfile, DailyPlan } from '../types';
 import { MEALS } from '../constants';
 import { dataService } from './dataService';
 
+// Updated to use process.env.API_KEY and gemini-3-pro-preview for plan generation
 export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]> => {
   // Now async
   const currentMeals = await dataService.getMeals();
   const mealList = currentMeals.map(m => `${m.id}: ${m.name} (${m.macros.calories}kcal)`).join(', ');
   
-  // Fetch API Key from DB
-  const content = await dataService.getContent();
-  const apiKey = content.geminiApiKey;
+  // Use environment variable exclusively
+  const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-      console.warn("Gemini API Key is missing in Admin Settings.");
+      console.warn("Gemini API Key is missing in environment variables.");
       // Return default plan immediately if no key
       return Array.from({ length: 7 }).map((_, i) => ({
         day: `Day ${i + 1}`,
@@ -54,7 +55,7 @@ export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]
   try {
     const ai = new GoogleGenAI({ apiKey: apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: 'gemini-3-pro-preview', // Complex Text Task
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -97,17 +98,16 @@ export const generateWeeklyPlan = async (user: UserProfile): Promise<DailyPlan[]
   }
 };
 
+// Updated to use process.env.API_KEY and gemini-3-flash-preview for general chat
 export const chatWithNutritionist = async (history: {role: string, text: string}[], newMessage: string) => {
     // Now async
     const currentMeals = await dataService.getMeals();
     const menuContext = currentMeals.map(m => `- ${m.name}: ${m.description} (${m.macros.calories} Cal, ${m.macros.protein}g Protein). Price: ${m.price}`).join('\n');
 
-    // Fetch API Key from DB
-    const content = await dataService.getContent();
-    const apiKey = content.geminiApiKey;
+    const apiKey = process.env.API_KEY;
 
     if (!apiKey) {
-        return "عذراً، خدمة الذكاء الاصطناعي متوقفة حالياً لعدم توفر مفتاح التشغيل. يرجى التواصل مع الإدارة.";
+        return "عذراً، خدمة الذكاء الاصطناعي متوقفة حالياً.";
     }
 
     const systemInstruction = `
@@ -128,7 +128,7 @@ export const chatWithNutritionist = async (history: {role: string, text: string}
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey });
       const chat = ai.chats.create({
-        model: "gemini-2.5-flash",
+        model: 'gemini-3-flash-preview', // Basic Text Task
         config: { systemInstruction }
       });
       
@@ -136,6 +136,6 @@ export const chatWithNutritionist = async (history: {role: string, text: string}
       return response.text;
     } catch (error) {
       console.error(error);
-      return "عذراً، أواجه مشكلة في الاتصال بالخادم حالياً. يرجى التأكد من مفتاح API أو المحاولة لاحقاً.";
+      return "عذراً، أواجه مشكلة في الاتصال بالخادم حالياً. يرجى المحاولة لاحقاً.";
     }
 };

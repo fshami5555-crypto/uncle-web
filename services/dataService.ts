@@ -50,8 +50,18 @@ export const dataService = {
   
   saveSubscription: async (sub: Subscription) => {
     const id = sub.id || `sub_${Date.now()}`;
-    const subWithId = { ...sub, id };
+    const subWithId = { ...sub, id, status: 'active', deliveredCount: 0, postponedCount: 0 };
     await setDoc(doc(db, "subscriptions", id), subWithId);
+  },
+
+  updateSubscription: async (id: string, updates: Partial<Subscription>) => {
+    const subRef = doc(db, "subscriptions", id);
+    await updateDoc(subRef, updates);
+  },
+
+  deleteSubscription: async (id: string) => {
+    const subRef = doc(db, "subscriptions", id);
+    await deleteDoc(subRef);
   },
 
   // Content
@@ -68,7 +78,6 @@ export const dataService = {
             'نظام اشتراك مرن',
             'توصيل دقيق في الموعد'
         ],
-        geminiApiKey: '',
         contactPhone: '',
         appBannerTitle1: 'صحتك صارت',
         appBannerHighlight: 'أسهل وأقرب',
@@ -94,7 +103,6 @@ export const dataService = {
             ...defaults, 
             ...data, 
             featuresList: data.featuresList || defaults.featuresList,
-            geminiApiKey: data.geminiApiKey || defaults.geminiApiKey,
             contactPhone: data.contactPhone || defaults.contactPhone
         };
       } else {
@@ -230,7 +238,6 @@ export const dataService = {
     });
       
     if (plans.length === 0) {
-        // Return defaults (omitted for brevity, same as previous)
          return [];
     }
     return plans;

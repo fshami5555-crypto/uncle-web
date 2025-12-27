@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { UserProfile, DailyPlan } from '../types';
 import { INITIAL_USER_PROFILE } from '../constants';
@@ -46,19 +47,18 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setLoading(true);
 
     try {
-      // Fetch API Key dynamically
-      const content = await dataService.getContent();
-      const apiKey = content.geminiApiKey;
+      // API key is now obtained exclusively from environment variables
+      const apiKey = process.env.API_KEY;
 
       if (!apiKey) {
-        setMessages(prev => [...prev, { role: 'model', text: 'عذراً، خدمة المساعد الذكي غير متاحة حالياً (المفتاح غير مضبوط في الإعدادات).' }]);
+        setMessages(prev => [...prev, { role: 'model', text: 'عذراً، خدمة المساعد الذكي غير متاحة حالياً.' }]);
         setLoading(false);
         return;
       }
 
       const ai = new GoogleGenAI({ apiKey: apiKey });
       const chat = ai.chats.create({
-        model: "gemini-2.5-flash",
+        model: 'gemini-3-flash-preview', // Basic Text Task
         config: {
             systemInstruction: `
             You are a friendly nutritionist AI for "Uncle Healthy". 
@@ -118,7 +118,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setIsGenerating(true);
     try {
         // 1. Generate Plan One Time
-        // This service already uses the dynamic API key from dataService internally
         const plan = await generateWeeklyPlan(formData);
         
         // 2. Prepare Complete User Object

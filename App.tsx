@@ -10,6 +10,7 @@ import { Login } from './components/Login';
 import { MealDetail } from './components/MealDetail';
 import { Cart } from './components/Cart';
 import { AdminDashboard } from './components/AdminDashboard';
+import { ChefDashboard } from './components/ChefDashboard';
 import { ChatWidget } from './components/ChatWidget';
 import { StaticPage } from './components/StaticPage';
 import { UserProfile, PageView, Meal, CartItem, SiteContent } from './types';
@@ -120,6 +121,8 @@ const App: React.FC = () => {
     setUser(loggedInUser);
     if (loggedInUser.isAdmin) {
         setCurrentView('ADMIN');
+    } else if (loggedInUser.isChef || loggedInUser.isEmployee) {
+        setCurrentView('CHEF');
     } else {
         setCurrentView('PROFILE');
     }
@@ -239,6 +242,9 @@ const App: React.FC = () => {
       case 'ADMIN':
         if (!user.isAdmin) return <Home onStart={() => setCurrentView('LOGIN')} />;
         return <AdminDashboard onLogout={handleLogout} />;
+      case 'CHEF':
+        if (!user.isChef && !user.isEmployee) return <Home onStart={() => setCurrentView('LOGIN')} />;
+        return <ChefDashboard onLogout={handleLogout} user={user} />;
       default:
         return <Home onStart={() => setCurrentView('LOGIN')} />;
     }
@@ -246,7 +252,7 @@ const App: React.FC = () => {
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  if (currentView === 'ADMIN') {
+  if (currentView === 'ADMIN' || currentView === 'CHEF') {
       return renderView();
   }
 

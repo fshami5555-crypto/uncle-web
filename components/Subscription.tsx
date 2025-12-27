@@ -91,7 +91,11 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
         const finalPrice = Math.max(0, selectedPlan.price - discount);
         
         try {
+            // Added 'id', 'status', and missing tracking properties to satisfy the 'Subscription' interface requirements.
+            // dataService.saveSubscription will handle real ID generation and status initialization.
             await dataService.saveSubscription({
+                id: '', // Will be updated in dataService
+                status: 'active', // Default initial status
                 duration: selectedPlan.durationLabel, // Store label for readability
                 deliverySlot: subData.deliverySlot,
                 address: subData.address,
@@ -99,8 +103,14 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
                 notes: subData.notes, // Save notes
                 date: new Date().toISOString(),
                 planTitle: selectedPlan.title,
-                pricePaid: finalPrice
-            });
+                pricePaid: finalPrice,
+                // Fix: Add missing tracking properties required by Subscription interface
+                // Defaulting to 1 meal per day for user self-subscription from the front-end
+                mealsPerDay: 1,
+                totalMeals: selectedPlan.durationLabel.includes('Monthly') ? 30 : 7,
+                deliveredCount: 0,
+                postponedCount: 0
+            } as SubscriptionModel);
             alert('تم استلام طلب الاشتراك بنجاح! سيتواصل معك فريقنا قريباً.');
             setStep(1);
             setSelectedPlanId(null);
@@ -234,7 +244,7 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
                 {/* Promo Code Section */}
                 <div className="bg-uh-cream/50 p-4 rounded-xl border border-uh-cream">
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                        <Tag size={16}/> لديك كوبون خصم؟
+                        <Tag size={16}/> لديك كوبون خصم?
                     </label>
                     <div className="flex gap-2">
                         <input 
