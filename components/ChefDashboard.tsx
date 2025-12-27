@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Subscription, UserProfile, SubscriptionPlan, DeliverySlot, Meal, DayConfig } from '../types';
 import { dataService } from '../services/dataService';
-import { ChefHat, LogOut, Clock, MapPin, Phone, Truck, CheckCircle, AlertTriangle, Calendar, User, Info, RefreshCcw, Plus, Trash2, X, ChevronDown, ChevronUp, CalendarDays, Edit3, Hash } from 'lucide-react';
+import { ChefHat, LogOut, Clock, MapPin, Phone, Truck, CheckCircle, AlertTriangle, Calendar, User, Info, RefreshCcw, Plus, Trash2, X, ChevronDown, ChevronUp, CalendarDays, Edit3, Hash, MessageSquare } from 'lucide-react';
 import { OptimizedImage } from './OptimizedImage';
 
 interface ChefDashboardProps {
@@ -19,6 +19,7 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
   
   // Modals States
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDayModal, setShowDayModal] = useState(false);
   const [expandedSubId, setExpandedSubId] = useState<string | null>(null);
   
@@ -29,13 +30,15 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
   const [activeDayEdit, setActiveDayEdit] = useState<{subId: string, date: string, mealsPerDay: number} | null>(null);
   const [dayEditForm, setDayEditForm] = useState<DayConfig>({ mealIds: [], status: 'pending' });
 
-  const [newSub, setNewSub] = useState({
+  // Add/Edit Sub State
+  const [subForm, setSubForm] = useState({
+      id: '',
       customerName: '',
       phone: '',
       address: '',
       planId: '',
       totalMeals: 30,
-      mealsPerDay: 1, // New field: 1, 2, or 3
+      mealsPerDay: 1,
       deliverySlot: DeliverySlot.MORNING,
       notes: '',
       allergies: ''
@@ -80,41 +83,70 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
       }
   };
 
-  const handleAddSub = async (e: React.FormEvent) => {
+  const handleOpenEdit = (sub: Subscription) => {
+      const plan = plans.find(p => p.title === sub.planTitle);
+      setSubForm({
+          id: sub.id,
+          customerName: sub.user?.name || '',
+          phone: sub.phone,
+          address: sub.address,
+          planId: plan?.id || '',
+          totalMeals: sub.totalMeals,
+          mealsPerDay: sub.mealsPerDay,
+          deliverySlot: sub.deliverySlot,
+          notes: sub.notes || '',
+          allergies: sub.user?.allergies || ''
+      });
+      setShowEditModal(true);
+  };
+
+  const handleSaveSub = async (e: React.FormEvent) => {
       if (isEmployee) return;
       e.preventDefault();
-      const selectedPlan = plans.find(p => p.id === newSub.planId);
+      const selectedPlan = plans.find(p => p.id === subForm.planId);
       if (!selectedPlan) { alert('يرجى اختيار باقة'); return; }
 
-      const subscription: Subscription = {
-          id: `sub_chef_${Date.now()}`,
-          date: new Date().toISOString().split('T')[0],
-          address: newSub.address,
-          phone: newSub.phone,
-          deliverySlot: newSub.deliverySlot,
+      const subData: Partial<Subscription> = {
+          address: subForm.address,
+          phone: subForm.phone,
+          deliverySlot: subForm.deliverySlot,
           planTitle: selectedPlan.title,
-          pricePaid: selectedPlan.price,
-          duration: selectedPlan.durationLabel,
-          mealsPerDay: Number(newSub.mealsPerDay),
-          status: 'active',
-          totalMeals: Number(newSub.totalMeals),
-          deliveredCount: 0,
-          postponedCount: 0,
-          notes: newSub.notes,
-          dailyConfigs: {},
+          mealsPerDay: Number(subForm.mealsPerDay),
+          totalMeals: Number(subForm.totalMeals),
+          notes: subForm.notes,
           user: {
-              id: newSub.phone,
-              name: newSub.customerName,
-              phone: newSub.phone,
-              allergies: newSub.allergies,
+              id: subForm.phone,
+              name: subForm.customerName,
+              phone: subForm.phone,
+              allergies: subForm.allergies,
               hasProfile: true,
               age: '', gender: '', height: '', weight: '', goal: ''
           }
       };
 
-      await dataService.saveSubscription(subscription);
+      if (subForm.id) {
+          // Edit existing
+          await dataService.updateSubscription(subForm.id, subData);
+          alert('تم تحديث بيانات الاشتراك بنجاح');
+      } else {
+          // Create new
+          const newSubscription: Subscription = {
+              ...subData,
+              id: `sub_chef_${Date.now()}`,
+              date: new Date().toISOString().split('T')[0],
+              pricePaid: selectedPlan.price,
+              duration: selectedPlan.durationLabel,
+              status: 'active',
+              deliveredCount: 0,
+              postponedCount: 0,
+              dailyConfigs: {},
+          } as Subscription;
+          await dataService.saveSubscription(newSubscription);
+          alert('تم تفعيل الاشتراك الجديد بنجاح');
+      }
+
       setShowAddModal(false);
-      setNewSub({ customerName: '', phone: '', address: '', planId: '', totalMeals: 30, mealsPerDay: 1, deliverySlot: DeliverySlot.MORNING, notes: '', allergies: '' });
+      setShowEditModal(false);
       loadData();
   };
 
@@ -122,7 +154,6 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
       if (isEmployee) return;
       const existing = sub.dailyConfigs?.[date] || { mealIds: [], status: 'pending' };
       
-      // Ensure mealIds array is initialized with correct length
       const initialMealIds = [...existing.mealIds];
       while (initialMealIds.length < sub.mealsPerDay) {
           initialMealIds.push('');
@@ -230,6 +261,89 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
 
   const filteredSubs = subscriptions.filter(s => filter === 'all' || s.status === filter);
 
+  const SubscriptionModal = ({ mode }: { mode: 'ADD' | 'EDIT' }) => {
+      const isEdit = mode === 'EDIT';
+      const onClose = isEdit ? () => setShowEditModal(false) : () => setShowAddModal(false);
+
+      return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
+            <div className="bg-white rounded-3xl w-full max-w-xl p-8 shadow-2xl my-8 relative">
+                <div className="flex justify-between items-center mb-6 border-b pb-4">
+                    <h3 className="text-xl font-bold flex items-center gap-2">
+                        {isEdit ? <Edit3 className="text-uh-gold" /> : <Plus className="text-uh-green" />}
+                        {isEdit ? 'تعديل بيانات الاشتراك' : 'تفعيل اشتراك زبون جديد'}
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition"><X /></button>
+                </div>
+                
+                <form onSubmit={handleSaveSub} className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">اسم الزبون الكامل</label>
+                            <input required placeholder="مثال: أحمد محمد" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" value={subForm.customerName} onChange={e => setSubForm({...subForm, customerName: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">رقم الهاتف</label>
+                            <input required type="tel" placeholder="079xxxxxxx" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" value={subForm.phone} onChange={e => setSubForm({...subForm, phone: e.target.value})} />
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">عنوان التوصيل</label>
+                        <textarea required placeholder="العنوان بالتفصيل" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" rows={2} value={subForm.address} onChange={e => setSubForm({...subForm, address: e.target.value})} />
+                    </div>
+                    
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">باقة الاشتراك</label>
+                            <select required className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={subForm.planId} onChange={e => setSubForm({...subForm, planId: e.target.value})}>
+                                <option value="">اختر باقة...</option>
+                                {plans.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-uh-greenDark mr-2 uppercase">نظام الوجبات اليومي</label>
+                            <select required className="w-full border p-4 rounded-xl bg-uh-cream outline-none font-bold" value={subForm.mealsPerDay} onChange={e => setSubForm({...subForm, mealsPerDay: Number(e.target.value)})}>
+                                <option value={1}>وجبة واحدة يومياً</option>
+                                <option value={2}>وجبتين يومياً</option>
+                                <option value={3}>ثلاث وجبات يومياً</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4">
+                        <div className="md:col-span-2 space-y-1">
+                           <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">رصيد الوجبات الإجمالي</label>
+                           <input type="number" className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={subForm.totalMeals} onChange={e => setSubForm({...subForm, totalMeals: Number(e.target.value)})} />
+                        </div>
+                        <div className="space-y-1">
+                           <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">فترة التوصيل</label>
+                           <select className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={subForm.deliverySlot} onChange={e => setSubForm({...subForm, deliverySlot: e.target.value as DeliverySlot})}>
+                                <option value={DeliverySlot.MORNING}>صباحي</option>
+                                <option value={DeliverySlot.EVENING}>مسائي</option>
+                           </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-red-500 mr-2 uppercase flex items-center gap-1"><AlertTriangle size={10}/> حساسيات زبون / استبدال أطعمة</label>
+                        <input placeholder="مثال: حساسية مكسرات، بدون بصل، استبدال التوت..." className="w-full border border-red-100 p-4 rounded-xl bg-red-50 text-red-700 font-bold placeholder-red-300" value={subForm.allergies} onChange={e => setSubForm({...subForm, allergies: e.target.value})} />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-uh-dark mr-2 uppercase flex items-center gap-1"><MessageSquare size={10}/> ملاحظات إضافية دائمة</label>
+                        <textarea placeholder="ملاحظات تظهر دائماً للمطبخ عند تحضير الوجبة..." className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" rows={2} value={subForm.notes} onChange={e => setSubForm({...subForm, notes: e.target.value})} />
+                    </div>
+
+                    <button type="submit" className={`w-full ${isEdit ? 'bg-uh-dark' : 'bg-uh-green'} text-white font-bold py-4 rounded-2xl shadow-lg mt-4 hover:brightness-110 transition-all active:scale-95`}>
+                        {isEdit ? 'تحديث بيانات الاشتراك' : 'حفظ وتفعيل عضوية الزبون'}
+                    </button>
+                </form>
+            </div>
+        </div>
+      );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-arabic" dir="rtl">
       {/* Header */}
@@ -240,7 +354,13 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
           </div>
           <div className="flex items-center gap-4">
               {!isEmployee && (
-                  <button onClick={() => setShowAddModal(true)} className="bg-uh-gold text-uh-dark px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-yellow-500 transition shadow-sm">
+                  <button 
+                    onClick={() => {
+                        setSubForm({ id: '', customerName: '', phone: '', address: '', planId: '', totalMeals: 30, mealsPerDay: 1, deliverySlot: DeliverySlot.MORNING, notes: '', allergies: '' });
+                        setShowAddModal(true);
+                    }} 
+                    className="bg-uh-gold text-uh-dark px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-yellow-500 transition shadow-sm"
+                  >
                       <Plus size={20}/> <span>إضافة اشتراك</span>
                   </button>
               )}
@@ -293,13 +413,22 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
                               
                               <div className="p-6 border-l border-gray-50 relative group">
                                   {!isEmployee && (
-                                      <button 
-                                        onClick={() => handleDeleteSubscription(sub.id)}
-                                        className="absolute top-2 left-2 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition opacity-0 group-hover:opacity-100"
-                                        title="حذف الاشتراك نهائياً"
-                                      >
-                                          <Trash2 size={18} />
-                                      </button>
+                                      <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                                          <button 
+                                            onClick={() => handleOpenEdit(sub)}
+                                            className="p-2 text-uh-gold hover:bg-uh-gold/10 rounded-full transition"
+                                            title="تعديل الاشتراك"
+                                          >
+                                              <Edit3 size={18} />
+                                          </button>
+                                          <button 
+                                            onClick={() => handleDeleteSubscription(sub.id)}
+                                            className="p-2 text-red-400 hover:bg-red-50 rounded-full transition"
+                                            title="حذف الاشتراك"
+                                          >
+                                              <Trash2 size={18} />
+                                          </button>
+                                      </div>
                                   )}
                                   
                                   <div className="flex items-center gap-3 mb-4 cursor-pointer" onClick={() => setExpandedSubId(isExpanded ? null : sub.id)}>
@@ -308,7 +437,7 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
                                           <h3 className="font-bold text-lg text-uh-dark">{customer?.name}</h3>
                                           <div className="flex gap-2 items-center">
                                               <span className="text-[10px] bg-uh-gold/20 text-uh-greenDark px-2 py-0.5 rounded-full font-bold">{sub.planTitle}</span>
-                                              <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold">بدأ في: {sub.date}</span>
+                                              <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold">بدأ: {sub.date}</span>
                                           </div>
                                       </div>
                                   </div>
@@ -320,9 +449,9 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
 
                               <div className="p-6 bg-gray-50/50 border-l border-gray-50 cursor-pointer" onClick={() => setExpandedSubId(isExpanded ? null : sub.id)}>
                                   <div className="flex justify-between items-start mb-4">
-                                      <h4 className="text-xs font-bold text-gray-400 uppercase">مهمة لليوم ({sub.mealsPerDay} وجبات)</h4>
+                                      <h4 className="text-xs font-bold text-gray-400 uppercase">مهمة لليوم ({sub.mealsPerDay} وجبة)</h4>
                                       <div className="flex gap-1">
-                                          <span className="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded-full font-bold">المتبقي: {remaining}</span>
+                                          <span className="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded-full font-bold">رصيد: {remaining}</span>
                                           {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
                                       </div>
                                   </div>
@@ -341,8 +470,16 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
                                       <div className="text-center py-4 text-gray-400 text-xs italic">لا توجد وجبات مبرمجة لليوم</div>
                                   )}
 
-                                  <div className="mt-3 p-2 rounded-xl bg-red-50 text-red-700 text-xs font-bold">
-                                      ⚠️ {customer?.allergies || 'لا توجد ملاحظات صحية'}
+                                  <div className="mt-3 space-y-2">
+                                      <div className="p-2 rounded-xl bg-red-50 text-red-700 text-[10px] font-bold border border-red-100">
+                                          🚨 حساسية: {customer?.allergies || 'لا يوجد'}
+                                      </div>
+                                      {sub.notes && (
+                                          <div className="p-2 rounded-xl bg-uh-cream text-uh-dark text-[10px] font-bold border border-uh-gold/20 flex items-start gap-1">
+                                              <MessageSquare size={10} className="mt-0.5 text-uh-gold"/>
+                                              <span>{sub.notes}</span>
+                                          </div>
+                                      )}
                                   </div>
                               </div>
 
@@ -376,6 +513,10 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
               })}
           </div>
       </main>
+
+      {/* Modals */}
+      {showAddModal && <SubscriptionModal mode="ADD" />}
+      {showEditModal && <SubscriptionModal mode="EDIT" />}
 
       {/* Day Editing Modal */}
       {showDayModal && activeDayEdit && !isEmployee && (
@@ -417,60 +558,6 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
 
                       <button onClick={saveDayConfig} className="w-full bg-uh-green text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-uh-greenDark transition transform hover:-translate-y-1">حفظ إعدادات اليوم</button>
                   </div>
-              </div>
-          </div>
-      )}
-
-      {/* Add Subscription Modal */}
-      {showAddModal && !isEmployee && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
-              <div className="bg-white rounded-3xl w-full max-w-xl p-8 shadow-2xl my-8 relative">
-                  <div className="flex justify-between items-center mb-6 border-b pb-4">
-                      <h3 className="text-xl font-bold flex items-center gap-2"><Plus className="text-uh-green" /> تفعيل اشتراك زبون جديد</h3>
-                      <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-red-500 transition"><X /></button>
-                  </div>
-                  
-                  <form onSubmit={handleAddSub} className="space-y-4">
-                      <div className="grid md:grid-cols-2 gap-4">
-                          <input required placeholder="اسم الزبون الكامل" className="border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" value={newSub.customerName} onChange={e => setNewSub({...newSub, customerName: e.target.value})} />
-                          <input required type="tel" placeholder="رقم هاتف الزبون" className="border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" value={newSub.phone} onChange={e => setNewSub({...newSub, phone: e.target.value})} />
-                      </div>
-                      <textarea required placeholder="العنوان بالتفصيل" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" rows={2} value={newSub.address} onChange={e => setNewSub({...newSub, address: e.target.value})} />
-                      
-                      <div className="grid md:grid-cols-2 gap-4">
-                          <div>
-                              <label className="text-xs font-bold text-gray-400 mb-1 block uppercase">باقة الاشتراك</label>
-                              <select required className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={newSub.planId} onChange={e => setNewSub({...newSub, planId: e.target.value})}>
-                                  <option value="">اختر باقة...</option>
-                                  {plans.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                              </select>
-                          </div>
-                          <div>
-                              <label className="text-xs font-bold text-uh-greenDark mb-1 block uppercase">نظام الوجبات اليومي</label>
-                              <select required className="w-full border p-4 rounded-xl bg-uh-cream outline-none font-bold" value={newSub.mealsPerDay} onChange={e => setNewSub({...newSub, mealsPerDay: Number(e.target.value)})}>
-                                  <option value={1}>وجبة واحدة يومياً</option>
-                                  <option value={2}>وجبتين يومياً</option>
-                                  <option value={3}>ثلاث وجبات يومياً</option>
-                              </select>
-                          </div>
-                      </div>
-
-                      <div className="grid md:grid-cols-3 gap-4">
-                          <div className="md:col-span-2">
-                             <label className="text-xs font-bold text-gray-400 mb-1 block uppercase">رصيد الوجبات الإجمالي</label>
-                             <input type="number" className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={newSub.totalMeals} onChange={e => setNewSub({...newSub, totalMeals: Number(e.target.value)})} />
-                          </div>
-                          <div>
-                             <label className="text-xs font-bold text-gray-400 mb-1 block uppercase">فترة التوصيل</label>
-                             <select className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={newSub.deliverySlot} onChange={e => setNewSub({...newSub, deliverySlot: e.target.value as DeliverySlot})}>
-                                  <option value={DeliverySlot.MORNING}>صباحي</option>
-                                  <option value={DeliverySlot.EVENING}>مسائي</option>
-                             </select>
-                          </div>
-                      </div>
-
-                      <button type="submit" className="w-full bg-uh-green text-white font-bold py-4 rounded-2xl shadow-lg mt-4 hover:bg-uh-greenDark transition-all active:scale-95">حفظ وتفعيل عضوية الزبون</button>
-                  </form>
               </div>
           </div>
       )}
