@@ -10,6 +10,98 @@ interface ChefDashboardProps {
   user: UserProfile;
 }
 
+interface SubscriptionModalProps {
+  mode: 'ADD' | 'EDIT';
+  onClose: () => void;
+  subForm: any;
+  setSubForm: React.Dispatch<React.SetStateAction<any>>;
+  plans: SubscriptionPlan[];
+  handleSaveSub: (e: React.FormEvent) => Promise<void>;
+}
+
+// Fixed: Moved outside to prevent re-mounting on every state change
+const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ mode, onClose, subForm, setSubForm, plans, handleSaveSub }) => {
+    const isEdit = mode === 'EDIT';
+
+    return (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-xl p-8 shadow-2xl my-8 relative">
+              <div className="flex justify-between items-center mb-6 border-b pb-4">
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                      {isEdit ? <Edit3 className="text-uh-gold" /> : <Plus className="text-uh-green" />}
+                      {isEdit ? 'تعديل بيانات الاشتراك' : 'تفعيل اشتراك زبون جديد'}
+                  </h3>
+                  <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition"><X /></button>
+              </div>
+              
+              <form onSubmit={handleSaveSub} className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">اسم الزبون الكامل</label>
+                          <input required placeholder="مثال: أحمد محمد" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" value={subForm.customerName} onChange={e => setSubForm({...subForm, customerName: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">رقم الهاتف</label>
+                          <input required type="tel" placeholder="079xxxxxxx" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" value={subForm.phone} onChange={e => setSubForm({...subForm, phone: e.target.value})} />
+                      </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">عنوان التوصيل</label>
+                      <textarea required placeholder="العنوان بالتفصيل" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" rows={2} value={subForm.address} onChange={e => setSubForm({...subForm, address: e.target.value})} />
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">باقة الاشتراك</label>
+                          <select required className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={subForm.planId} onChange={e => setSubForm({...subForm, planId: e.target.value})}>
+                              <option value="">اختر باقة...</option>
+                              {plans.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                          </select>
+                      </div>
+                      <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-uh-greenDark mr-2 uppercase">نظام الوجبات اليومي</label>
+                          <select required className="w-full border p-4 rounded-xl bg-uh-cream outline-none font-bold" value={subForm.mealsPerDay} onChange={e => setSubForm({...subForm, mealsPerDay: Number(e.target.value)})}>
+                              <option value={1}>وجبة واحدة يومياً</option>
+                              <option value={2}>وجبتين يومياً</option>
+                              <option value={3}>ثلاث وجبات يومياً</option>
+                          </select>
+                      </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2 space-y-1">
+                         <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">رصيد الوجبات الإجمالي</label>
+                         <input type="number" className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={subForm.totalMeals} onChange={e => setSubForm({...subForm, totalMeals: Number(e.target.value)})} />
+                      </div>
+                      <div className="space-y-1">
+                         <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">فترة التوصيل</label>
+                         <select className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={subForm.deliverySlot} onChange={e => setSubForm({...subForm, deliverySlot: e.target.value as DeliverySlot})}>
+                              <option value={DeliverySlot.MORNING}>صباحي</option>
+                              <option value={DeliverySlot.EVENING}>مسائي</option>
+                         </select>
+                      </div>
+                  </div>
+
+                  <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-red-500 mr-2 uppercase flex items-center gap-1"><AlertTriangle size={10}/> حساسيات زبون / استبدال أطعمة</label>
+                      <input placeholder="مثال: حساسية مكسرات، بدون بصل، استبدال التوت..." className="w-full border border-red-100 p-4 rounded-xl bg-red-50 text-red-700 font-bold placeholder-red-300" value={subForm.allergies} onChange={e => setSubForm({...subForm, allergies: e.target.value})} />
+                  </div>
+
+                  <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-uh-dark mr-2 uppercase flex items-center gap-1"><MessageSquare size={10}/> ملاحظات إضافية دائمة</label>
+                      <textarea placeholder="ملاحظات تظهر دائماً للمطبخ عند تحضير الوجبة..." className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" rows={2} value={subForm.notes} onChange={e => setSubForm({...subForm, notes: e.target.value})} />
+                  </div>
+
+                  <button type="submit" className={`w-full ${isEdit ? 'bg-uh-dark' : 'bg-uh-green'} text-white font-bold py-4 rounded-2xl shadow-lg mt-4 hover:brightness-110 transition-all active:scale-95`}>
+                      {isEdit ? 'تحديث بيانات الاشتراك' : 'حفظ وتفعيل عضوية الزبون'}
+                  </button>
+              </form>
+          </div>
+      </div>
+    );
+};
+
 export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -106,7 +198,7 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
       const selectedPlan = plans.find(p => p.id === subForm.planId);
       if (!selectedPlan) { alert('يرجى اختيار باقة'); return; }
 
-      const subData: Partial<Subscription> = {
+      const updateData: Partial<Subscription> = {
           address: subForm.address,
           phone: subForm.phone,
           deliverySlot: subForm.deliverySlot,
@@ -126,12 +218,12 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
 
       if (subForm.id) {
           // Edit existing
-          await dataService.updateSubscription(subForm.id, subData);
+          await dataService.updateSubscription(subForm.id, updateData);
           alert('تم تحديث بيانات الاشتراك بنجاح');
       } else {
           // Create new
           const newSubscription: Subscription = {
-              ...subData,
+              ...updateData,
               id: `sub_chef_${Date.now()}`,
               date: new Date().toISOString().split('T')[0],
               pricePaid: selectedPlan.price,
@@ -260,89 +352,6 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
   };
 
   const filteredSubs = subscriptions.filter(s => filter === 'all' || s.status === filter);
-
-  const SubscriptionModal = ({ mode }: { mode: 'ADD' | 'EDIT' }) => {
-      const isEdit = mode === 'EDIT';
-      const onClose = isEdit ? () => setShowEditModal(false) : () => setShowAddModal(false);
-
-      return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
-            <div className="bg-white rounded-3xl w-full max-w-xl p-8 shadow-2xl my-8 relative">
-                <div className="flex justify-between items-center mb-6 border-b pb-4">
-                    <h3 className="text-xl font-bold flex items-center gap-2">
-                        {isEdit ? <Edit3 className="text-uh-gold" /> : <Plus className="text-uh-green" />}
-                        {isEdit ? 'تعديل بيانات الاشتراك' : 'تفعيل اشتراك زبون جديد'}
-                    </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition"><X /></button>
-                </div>
-                
-                <form onSubmit={handleSaveSub} className="space-y-4">
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">اسم الزبون الكامل</label>
-                            <input required placeholder="مثال: أحمد محمد" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" value={subForm.customerName} onChange={e => setSubForm({...subForm, customerName: e.target.value})} />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">رقم الهاتف</label>
-                            <input required type="tel" placeholder="079xxxxxxx" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" value={subForm.phone} onChange={e => setSubForm({...subForm, phone: e.target.value})} />
-                        </div>
-                    </div>
-                    
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">عنوان التوصيل</label>
-                        <textarea required placeholder="العنوان بالتفصيل" className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" rows={2} value={subForm.address} onChange={e => setSubForm({...subForm, address: e.target.value})} />
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">باقة الاشتراك</label>
-                            <select required className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={subForm.planId} onChange={e => setSubForm({...subForm, planId: e.target.value})}>
-                                <option value="">اختر باقة...</option>
-                                {plans.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                            </select>
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-uh-greenDark mr-2 uppercase">نظام الوجبات اليومي</label>
-                            <select required className="w-full border p-4 rounded-xl bg-uh-cream outline-none font-bold" value={subForm.mealsPerDay} onChange={e => setSubForm({...subForm, mealsPerDay: Number(e.target.value)})}>
-                                <option value={1}>وجبة واحدة يومياً</option>
-                                <option value={2}>وجبتين يومياً</option>
-                                <option value={3}>ثلاث وجبات يومياً</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-4">
-                        <div className="md:col-span-2 space-y-1">
-                           <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">رصيد الوجبات الإجمالي</label>
-                           <input type="number" className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={subForm.totalMeals} onChange={e => setSubForm({...subForm, totalMeals: Number(e.target.value)})} />
-                        </div>
-                        <div className="space-y-1">
-                           <label className="text-[10px] font-bold text-gray-400 mr-2 uppercase">فترة التوصيل</label>
-                           <select className="w-full border p-4 rounded-xl bg-gray-50 outline-none" value={subForm.deliverySlot} onChange={e => setSubForm({...subForm, deliverySlot: e.target.value as DeliverySlot})}>
-                                <option value={DeliverySlot.MORNING}>صباحي</option>
-                                <option value={DeliverySlot.EVENING}>مسائي</option>
-                           </select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-red-500 mr-2 uppercase flex items-center gap-1"><AlertTriangle size={10}/> حساسيات زبون / استبدال أطعمة</label>
-                        <input placeholder="مثال: حساسية مكسرات، بدون بصل، استبدال التوت..." className="w-full border border-red-100 p-4 rounded-xl bg-red-50 text-red-700 font-bold placeholder-red-300" value={subForm.allergies} onChange={e => setSubForm({...subForm, allergies: e.target.value})} />
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-uh-dark mr-2 uppercase flex items-center gap-1"><MessageSquare size={10}/> ملاحظات إضافية دائمة</label>
-                        <textarea placeholder="ملاحظات تظهر دائماً للمطبخ عند تحضير الوجبة..." className="w-full border p-4 rounded-xl bg-gray-50 outline-none focus:bg-white transition" rows={2} value={subForm.notes} onChange={e => setSubForm({...subForm, notes: e.target.value})} />
-                    </div>
-
-                    <button type="submit" className={`w-full ${isEdit ? 'bg-uh-dark' : 'bg-uh-green'} text-white font-bold py-4 rounded-2xl shadow-lg mt-4 hover:brightness-110 transition-all active:scale-95`}>
-                        {isEdit ? 'تحديث بيانات الاشتراك' : 'حفظ وتفعيل عضوية الزبون'}
-                    </button>
-                </form>
-            </div>
-        </div>
-      );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-arabic" dir="rtl">
@@ -514,9 +523,27 @@ export const ChefDashboard: React.FC<ChefDashboardProps> = ({ onLogout, user }) 
           </div>
       </main>
 
-      {/* Modals */}
-      {showAddModal && <SubscriptionModal mode="ADD" />}
-      {showEditModal && <SubscriptionModal mode="EDIT" />}
+      {/* Modals triggered from ChefDashboard */}
+      {showAddModal && (
+          <SubscriptionModal 
+            mode="ADD" 
+            onClose={() => setShowAddModal(false)} 
+            subForm={subForm} 
+            setSubForm={setSubForm} 
+            plans={plans} 
+            handleSaveSub={handleSaveSub} 
+          />
+      )}
+      {showEditModal && (
+          <SubscriptionModal 
+            mode="EDIT" 
+            onClose={() => setShowEditModal(false)} 
+            subForm={subForm} 
+            setSubForm={setSubForm} 
+            plans={plans} 
+            handleSaveSub={handleSaveSub} 
+          />
+      )}
 
       {/* Day Editing Modal */}
       {showDayModal && activeDayEdit && !isEmployee && (

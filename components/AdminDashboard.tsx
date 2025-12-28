@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { UserProfile, Order, Subscription, SiteContent, Meal, SubscriptionPlan, PromoCode, AnalyticsData } from '../types';
 import { authService } from '../services/authService';
 import { dataService } from '../services/dataService';
-import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap, MessageCircle, Phone, MapPin, Clock, Copy, Link as LinkIcon, BarChart2, TrendingUp, Download, Eye, PieChart } from 'lucide-react';
+import { ShoppingBag, Users, FileText, Calendar, Package, LogOut, Check, X, Trash2, Plus, Settings, Key, Shield, Smartphone, Tag, LayoutList, Menu, Edit, Zap, MessageCircle, Phone, MapPin, Clock, Copy, Link as LinkIcon, BarChart2, TrendingUp, Download, Eye, PieChart, Share2 } from 'lucide-react';
 import { INITIAL_USER_PROFILE, MEALS } from '../constants';
 import { ImageUploader } from './ImageUploader';
 import { OptimizedImage } from './OptimizedImage';
@@ -112,28 +112,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const handleCopyLink = (type: 'mealId' | 'planId', id: string) => {
       const url = `${window.location.origin}?${type}=${id}`;
       navigator.clipboard.writeText(url);
-      alert('تم نسخ الرابط المباشر إلى الحافظة!');
+      alert('تم نسخ الرابط المباشر بنجاح! يمكنك الآن مشاركته.');
   };
 
   const handleUpdateOrderStatus = async (id: string, status: 'pending' | 'completed' | 'cancelled') => {
       await dataService.updateOrderStatus(id, status);
-      const order = orders.find(o => o.id === id);
-      if (order && (status === 'completed' || status === 'cancelled')) {
-          const cleanPhone = order.phone.replace(/\D/g, '').replace(/^0/, '962');
-          const customerName = order.user.name || 'عميلنا العزيز';
-          const orderRef = order.id.slice(-6);
-          let message = status === 'completed' 
-            ? `مرحباً ${customerName} 👋\nيسعدنا إخبارك بأن طلبك رقم #${orderRef} من Uncle Healthy قد تم تجهيزه واكتماله! 🍽️✅\nشكراً لثقتك بنا.`
-            : `مرحباً ${customerName} 👋\nنأسف لإبلاغك بأن طلبك رقم #${orderRef} قد تم إلغاؤه ❌.\nيرجى التواصل معنا للاستفسار.`;
-          window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
-      }
       setOrders(await dataService.getOrders());
-  };
-
-  const handleSaveContent = async (e: React.FormEvent) => {
-      e.preventDefault();
-      await dataService.saveContent(content);
-      alert('تم حفظ المحتوى والإعدادات بنجاح');
   };
 
   const handleDeleteMeal = async (id: string) => {
@@ -197,29 +181,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       }
   };
 
-  const handleSavePromo = async () => {
-      if (!newPromo.code || !newPromo.discountAmount) { alert('الرجاء إدخال الكود والقيمة'); return; }
-      const promoToSave: PromoCode = {
-          id: `promo_${Date.now()}`,
-          code: newPromo.code.toUpperCase(),
-          discountAmount: Number(newPromo.discountAmount),
-          type: newPromo.type as 'MEALS' | 'SUBSCRIPTION',
-          isPercentage: newPromo.isPercentage || false,
-          isActive: true
-      };
-      await dataService.savePromoCode(promoToSave);
-      setPromos(await dataService.getPromoCodes());
-      setShowPromoModal(false);
-  };
-
-  const handleDeletePromo = async (id: string) => {
-      if(confirm('حذف هذا الكود؟')) {
-          await dataService.deletePromoCode(id);
-          setPromos(await dataService.getPromoCodes());
-      }
-  };
-
-  // Fix: Added missing getOrderStatusCounts function to provide data for the Donut Chart
   const getOrderStatusCounts = () => {
       const counts = {
           pending: orders.filter(o => o.status === 'pending').length,
@@ -227,9 +188,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           cancelled: orders.filter(o => o.status === 'cancelled').length,
       };
       return [
-          { label: 'قيد الانتظار', value: counts.pending, color: '#facc15' }, // yellow-400
-          { label: 'مكتمل', value: counts.completed, color: '#a8c038' },     // uh-green
-          { label: 'ملغي', value: counts.cancelled, color: '#ef4444' },     // red-500
+          { label: 'قيد الانتظار', value: counts.pending, color: '#facc15' },
+          { label: 'مكتمل', value: counts.completed, color: '#a8c038' },
+          { label: 'ملغي', value: counts.cancelled, color: '#ef4444' },
       ];
   };
 
@@ -304,24 +265,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                       </div>
                   </div>
               )}
-              {activeTab === 'ORDERS' && (
+              {activeTab === 'PLANS' && (
                   <div className="space-y-6">
-                      <h2 className="text-2xl font-bold text-uh-dark">الطلبات الأخيرة</h2>
-                      <div className="space-y-4">
-                          {orders.map(order => (
-                              <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
-                                  <div>
-                                      <div className="font-bold">#{order.id.slice(-6)} - {order.user.name}</div>
-                                      <div className="text-sm text-gray-500">{order.phone} | {order.total} د.أ</div>
-                                  </div>
-                                  <div className="flex gap-2">
-                                      {order.status === 'pending' && (
-                                          <>
-                                              <button onClick={() => handleUpdateOrderStatus(order.id, 'completed')} className="bg-uh-green text-white p-2 rounded"><Check size={16}/></button>
-                                              <button onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')} className="bg-red-500 text-white p-2 rounded"><X size={16}/></button>
-                                          </>
-                                      )}
-                                      <span className={`px-2 py-1 rounded text-xs font-bold ${order.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{order.status}</span>
+                      <div className="flex justify-between items-center">
+                          <h2 className="text-2xl font-bold text-uh-dark">إدارة خطط الاشتراك</h2>
+                          <button onClick={() => { setNewPlan({ title: '', price: 0, features: [], durationLabel: 'شهر' }); setPlanFeaturesText(''); setShowPlanModal(true); }} className="bg-uh-dark text-white px-4 py-2 rounded-lg flex items-center gap-2"><Plus size={18}/> باقة جديدة</button>
+                      </div>
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {plans.map(plan => (
+                              <div key={plan.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+                                  {plan.image && <img src={plan.image} className="h-40 w-full object-cover" alt=""/>}
+                                  <div className="p-5 flex-1 flex flex-col">
+                                      <div className="flex justify-between items-start mb-2">
+                                          <h3 className="font-bold text-lg">{plan.title}</h3>
+                                          <span className="text-uh-green font-bold">{plan.price} د.أ</span>
+                                      </div>
+                                      <p className="text-sm text-gray-500 mb-4">{plan.durationLabel}</p>
+                                      <div className="mt-auto flex justify-between gap-2 pt-4 border-t">
+                                          <div className="flex gap-2">
+                                              <button onClick={() => handleCopyLink('planId', plan.id)} className="p-2 text-uh-gold hover:bg-uh-gold/10 rounded-lg transition" title="نسخ رابط المشاركة"><LinkIcon size={18}/></button>
+                                              <button onClick={() => { setNewPlan({...plan}); setPlanFeaturesText(plan.features.join('\n')); setShowPlanModal(true); }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition" title="تعديل"><Edit size={18}/></button>
+                                          </div>
+                                          <button onClick={() => handleDeletePlan(plan.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition" title="حذف"><Trash2 size={18}/></button>
+                                      </div>
                                   </div>
                               </div>
                           ))}
@@ -331,18 +297,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               {activeTab === 'STORE' && (
                   <div className="space-y-6">
                       <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-bold text-uh-dark">الوجبات</h2>
-                        <button onClick={handleOpenAddMeal} className="bg-uh-dark text-white px-4 py-2 rounded-lg flex items-center gap-2"><Plus size={18}/> إضافة</button>
+                        <h2 className="text-2xl font-bold text-uh-dark">إدارة الوجبات</h2>
+                        <button onClick={handleOpenAddMeal} className="bg-uh-dark text-white px-4 py-2 rounded-lg flex items-center gap-2"><Plus size={18}/> إضافة وجبة</button>
                       </div>
-                      <div className="grid md:grid-cols-3 gap-4">
+                      <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
                           {meals.map(meal => (
-                              <div key={meal.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                                  <img src={meal.image} className="w-full h-32 object-cover rounded mb-2" alt=""/>
-                                  <div className="font-bold">{meal.name}</div>
-                                  <div className="text-uh-green font-bold">{meal.price} د.أ</div>
+                              <div key={meal.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 group">
+                                  <div className="relative overflow-hidden rounded mb-2">
+                                    <img src={meal.image} className="w-full h-32 object-cover transition group-hover:scale-105" alt=""/>
+                                    <button onClick={() => handleCopyLink('mealId', meal.id)} className="absolute top-2 left-2 bg-white/90 p-1.5 rounded-full text-uh-gold shadow opacity-0 group-hover:opacity-100 transition"><LinkIcon size={14}/></button>
+                                  </div>
+                                  <div className="font-bold truncate">{meal.name}</div>
+                                  <div className="text-uh-green font-bold text-sm">{meal.price} د.أ</div>
                                   <div className="flex justify-end gap-2 mt-2">
-                                      <button onClick={() => handleEditMeal(meal)} className="text-blue-500"><Edit size={16}/></button>
-                                      <button onClick={() => handleDeleteMeal(meal.id)} className="text-red-500"><Trash2 size={16}/></button>
+                                      <button onClick={() => handleEditMeal(meal)} className="text-blue-500 p-1"><Edit size={16}/></button>
+                                      <button onClick={() => handleDeleteMeal(meal.id)} className="text-red-500 p-1"><Trash2 size={16}/></button>
                                   </div>
                               </div>
                           ))}
@@ -351,6 +320,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               )}
           </main>
       </div>
+      
+      {showPlanModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+              <div className="bg-white rounded-2xl w-full max-w-lg p-6 animate-fade-in my-8">
+                  <div className="flex justify-between items-center mb-4 border-b pb-2">
+                      <h3 className="text-xl font-bold">{newPlan.id ? 'تعديل الباقة' : 'باقة جديدة'}</h3>
+                      <button onClick={() => setShowPlanModal(false)}><X className="text-gray-500"/></button>
+                  </div>
+                  <div className="space-y-4">
+                      <input placeholder="اسم الباقة" className="w-full border p-3 rounded-lg" value={newPlan.title} onChange={e => setNewPlan({...newPlan, title: e.target.value})} />
+                      <input type="number" placeholder="السعر" className="w-full border p-3 rounded-lg" value={newPlan.price || ''} onChange={e => setNewPlan({...newPlan, price: Number(e.target.value)})} />
+                      <input placeholder="مدة الباقة (مثال: أسبوعي / شهري)" className="w-full border p-3 rounded-lg" value={newPlan.durationLabel} onChange={e => setNewPlan({...newPlan, durationLabel: e.target.value})} />
+                      <ImageUploader label="صورة الباقة" value={newPlan.image || ''} onChange={(url) => setNewPlan({...newPlan, image: url})} />
+                      <textarea placeholder="المميزات (ميزة في كل سطر)" rows={4} className="w-full border p-3 rounded-lg" value={planFeaturesText} onChange={e => setPlanFeaturesText(e.target.value)} />
+                      <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={newPlan.isPopular} onChange={e => setNewPlan({...newPlan, isPopular: e.target.checked})} className="w-4 h-4 text-uh-green"/>
+                          <span className="text-sm font-bold">تمييز كـ "الأكثر طلباً"</span>
+                      </label>
+                      <button onClick={handleSavePlan} className="w-full bg-uh-green text-white font-bold py-3 rounded-lg">حفظ الباقة</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {showMealModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
               <div className="bg-white rounded-2xl w-full max-w-lg p-6 animate-fade-in my-8 max-h-[90vh] overflow-y-auto">

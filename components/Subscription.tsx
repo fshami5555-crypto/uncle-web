@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Subscription as SubscriptionModel, DeliverySlot, SubscriptionPlan } from '../types';
 import { dataService } from '../services/dataService';
-import { Check, Clock, MapPin, Truck, Tag, Edit3, Phone } from 'lucide-react';
+import { Check, Clock, MapPin, Truck, Tag, Edit3, Phone, Share2 } from 'lucide-react';
 import { OptimizedImage } from './OptimizedImage';
 
 interface SubscriptionProps {
@@ -13,6 +13,7 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
   const [step, setStep] = useState(1);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   
   const [subData, setSubData] = useState<Partial<SubscriptionModel>>({
     deliverySlot: DeliverySlot.MORNING,
@@ -21,12 +22,10 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
     notes: ''
   });
   
-  // Promo Logic
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [promoMessage, setPromoMessage] = useState('');
-  
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -36,7 +35,6 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
     fetchPlans();
   }, []);
 
-  // Handle Deep Linking / Initial Plan
   useEffect(() => {
       if (initialPlanId && plans.length > 0) {
           const exists = plans.some(p => p.id === initialPlanId);
@@ -50,16 +48,22 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
     setSelectedPlanId(id);
     setSubData(prev => ({ ...prev, duration: id }));
     setStep(2);
-    // Reset Promo when changing plans
     setDiscount(0);
     setAppliedPromo(null);
     setPromoCode('');
     setPromoMessage('');
   };
 
+  const handleSharePlan = (e: React.MouseEvent, planId: string) => {
+      e.stopPropagation();
+      const url = `${window.location.origin}?planId=${planId}`;
+      navigator.clipboard.writeText(url);
+      setCopiedId(planId);
+      setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const handleApplyPromo = async () => {
       if (!promoCode) return;
-      
       const promo = await dataService.verifyPromoCode(promoCode.toUpperCase(), 'SUBSCRIPTION');
       if (promo) {
           const selectedPlan = plans.find(p => p.id === selectedPlanId);
@@ -84,28 +88,22 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
   const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
     const selectedPlan = plans.find(p => p.id === selectedPlanId);
 
     if(subData.address && subData.phone && selectedPlanId && subData.deliverySlot && selectedPlan) {
         const finalPrice = Math.max(0, selectedPlan.price - discount);
-        
         try {
-            // Added 'id', 'status', and missing tracking properties to satisfy the 'Subscription' interface requirements.
-            // dataService.saveSubscription will handle real ID generation and status initialization.
             await dataService.saveSubscription({
-                id: '', // Will be updated in dataService
-                status: 'active', // Default initial status
-                duration: selectedPlan.durationLabel, // Store label for readability
+                id: '',
+                status: 'active',
+                duration: selectedPlan.durationLabel,
                 deliverySlot: subData.deliverySlot,
                 address: subData.address,
                 phone: subData.phone,
-                notes: subData.notes, // Save notes
+                notes: subData.notes,
                 date: new Date().toISOString(),
                 planTitle: selectedPlan.title,
                 pricePaid: finalPrice,
-                // Fix: Add missing tracking properties required by Subscription interface
-                // Defaulting to 1 meal per day for user self-subscription from the front-end
                 mealsPerDay: 1,
                 totalMeals: selectedPlan.durationLabel.includes('Monthly') ? 30 : 7,
                 deliveredCount: 0,
@@ -117,10 +115,9 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
             setSubData({ deliverySlot: DeliverySlot.MORNING, address: '', phone: '', notes: '' });
         } catch (error) {
             console.error(error);
-            alert("عذراً، حدث خطأ أثناء حفظ الاشتراك في قاعدة البيانات. يرجى المحاولة مرة أخرى.");
+            alert("عذراً، حدث خطأ أثناء حفظ الاشتراك.");
         }
     }
-
     setLoading(false);
   };
 
@@ -138,8 +135,15 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
           {plans.map(plan => (
             <div key={plan.id} className="bg-white rounded-3xl shadow-lg border-2 border-transparent hover:border-uh-green transition relative overflow-hidden group flex flex-col">
               {plan.image && (
-                <div className="h-48 overflow-hidden">
+                <div className="h-48 overflow-hidden relative">
                     <OptimizedImage src={plan.image} alt={plan.title} width={600} className="w-full h-full group-hover:scale-105 transition" />
+                    <button 
+                      onClick={(e) => handleSharePlan(e, plan.id)}
+                      className="absolute top-3 left-3 bg-white/90 p-2 rounded-full hover:bg-white text-uh-dark shadow-md z-20 transition active:scale-90"
+                      title="مشاركة الباقة"
+                    >
+                        {copiedId === plan.id ? <Check size={18} className="text-green-600"/> : <Share2 size={18} />}
+                    </button>
                 </div>
               )}
               
@@ -148,7 +152,9 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
               )}
               
               <div className="p-8 flex flex-col flex-1">
-                <h3 className="text-2xl font-bold mb-2 text-uh-dark">{plan.title}</h3>
+                <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-2xl font-bold text-uh-dark">{plan.title}</h3>
+                </div>
                 <div className="text-4xl font-brand text-uh-greenDark mb-6">{plan.price} <span className="text-lg text-gray-400">د.أ</span> <span className="text-sm text-gray-400 font-sans">/ {plan.durationLabel}</span></div>
                 
                 <ul className="space-y-4 mb-8 flex-1">
@@ -241,7 +247,6 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
                     />
                 </div>
 
-                {/* Promo Code Section */}
                 <div className="bg-uh-cream/50 p-4 rounded-xl border border-uh-cream">
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                         <Tag size={16}/> لديك كوبون خصم?
@@ -263,7 +268,6 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId }) => 
                     {promoMessage && <p className={`text-xs mt-2 ${appliedPromo ? 'text-green-600' : 'text-red-500'}`}>{promoMessage}</p>}
                 </div>
 
-                {/* Pricing Summary */}
                 <div className="border-t pt-4">
                     <div className="flex justify-between text-sm text-gray-600 mb-1">
                         <span>سعر الباقة</span>
