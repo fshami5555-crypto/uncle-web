@@ -94,30 +94,69 @@ export const MEALS: Meal[] = [
 
 export const PLANS = [
   {
-    id: 'p1',
-    title: 'الباقة الأسبوعية',
-    price: 45,
-    image: 'https://i.ibb.co/6J8BHK9s/28.jpg',
-    features: ['6 وجبات صحية متنوعة', 'توصيل مجاني يومياً', 'استشارة غذائية أولية'],
-    durationLabel: 'Weekly',
+    id: 'basic',
+    title: 'الخطة الأساسية - Basic',
+    price: 110,
+    image: '/images/plan-basic.jpg',
+    features: [
+      '22 طبق رئيسي (سلمون - لحمة - دجاج)',
+      'طبق واحد يومياً',
+      'شامل التوصيل (مناطق محددة)',
+      'كاشباك 10% عند تجديد الاشتراك',
+      'عرض المؤسسين - لأول 20 مشترك',
+      '2 وجبة مجانية شهرياً'
+    ],
+    durationLabel: 'شهري',
     isPopular: false
   },
   {
-    id: 'p2',
-    title: 'الباقة الشهرية الاقتصادية',
-    price: 160,
-    image: 'https://i.ibb.co/nqmV5jzX/23.png',
-    features: ['24 وجبة صحية (6 أيام/أسبوع)', 'توصيل مجاني', 'متابعة أسبوعية مع أخصائي'],
-    durationLabel: 'Monthly',
+    id: 'advanced',
+    title: 'الخطة المتقدمة - Advanced',
+    price: 135,
+    image: '/images/plan-advanced.jpg',
+    features: [
+      '22 طبق رئيسي (سلمون - لحمة - دجاج)',
+      '+ 22 شوربة',
+      'شامل التوصيل (مناطق محددة)',
+      'كاشباك 10% عند تجديد الاشتراك',
+      'عرض المؤسسين - لأول 20 مشترك',
+      '2 وجبة مجانية شهرياً'
+    ],
+    durationLabel: 'شهري',
+    isPopular: false
+  },
+  {
+    id: 'premium',
+    title: 'الخطة الشاملة - Premium',
+    price: 150,
+    image: '/images/plan-premium.jpg',
+    features: [
+      '22 طبق رئيسي (سلمون - لحمة - دجاج)',
+      '+ 22 شوربة',
+      '+ 22 دايت سوفت درينك',
+      'شامل التوصيل (مناطق محددة)',
+      'كاشباك 10% عند تجديد الاشتراك',
+      'عرض المؤسسين - لأول 20 مشترك',
+      '2 وجبة مجانية شهرياً'
+    ],
+    durationLabel: 'شهري',
     isPopular: true
   },
   {
-    id: 'p3',
-    title: 'باقة كبار الشخصيات',
-    price: 220,
-    image: 'https://i.ibb.co/6J8BHK9s/28.jpg',
-    features: ['30 وجبة فاخرة (يومياً)', 'توصيل في الوقت المفضل', 'تعديل المكونات حسب الطلب'],
-    durationLabel: 'Monthly VIP',
+    id: 'elite',
+    title: 'خطة الإيليت - Elite',
+    price: 190,
+    image: '/images/plan-elite.jpg',
+    features: [
+      '22 طبق رئيسي (سلمون - لحمة - دجاج)',
+      '+ 22 (شوربة + سلطة)',
+      '+ 22 عصير طبيعي',
+      'شامل التوصيل (مناطق محددة)',
+      'كاشباك 10% عند تجديد الاشتراك',
+      'عرض المؤسسين - لأول 20 مشترك',
+      '2 وجبة مجانية شهرياً'
+    ],
+    durationLabel: 'شهري',
     isPopular: false
   }
 ];
