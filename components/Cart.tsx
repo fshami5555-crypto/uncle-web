@@ -81,42 +81,25 @@ export const Cart: React.FC<CartProps> = ({ items, user, onUpdateQuantity, onRem
     setLoading(true);
     
     const orderId = `ORD-${Date.now()}`;
-    const newOrder = {
-        id: orderId,
-        user: user,
-        items: items,
-        total: Number(total.toFixed(2)),
-        address: address,
-        phone: phone,
-        date: new Date().toISOString(),
-        status: 'pending' as const,
-        tax: Number(taxAmount.toFixed(2)),
-        ...(appliedPromo && { promoCode: appliedPromo }),
-        ...(discountAmount > 0 && { discountApplied: discountAmount })
-    };
+    
+    // 1. Clear Cart and Show Success immediately
+    setIsOrdered(true);
+    onClearCart();
 
-    try {
-        // 1. Save to DB
-        await dataService.saveOrder(newOrder);
+    // 2. Send to WhatsApp if phone exists
+    if (restaurantPhone) {
+        const cleanPhone = restaurantPhone.replace(/\D/g, '').replace(/^0/, '962');
         
-        // 2. Clear Cart and Show Success immediately
-        setIsOrdered(true);
-        onClearCart();
-
-        // 3. Send to WhatsApp if phone exists
-        if (restaurantPhone) {
-            const cleanPhone = restaurantPhone.replace(/\D/g, '').replace(/^0/, '962');
-            
-            const itemsList = items.map(i => `- ${i.quantity}x ${i.name}`).join('\n');
-            const message = `🔔 *طلب جديد من تطبيق Uncle Healthy*
-            
+        const itemsList = items.map(i => `- ${i.quantity}x ${i.name}`).join('\n');
+        const message = `🔔 *طلب جديد من تطبيق Uncle Healthy*
+        
 رقم الطلب: #${orderId.slice(-6)}
-            
+        
 👤 *معلومات العميل:*
 الاسم: ${user.name || 'زائر'}
 هاتف: ${phone}
 العنوان: ${address}
-            
+        
 🛒 *تفاصيل الطلب:*
 ${itemsList}
 
@@ -125,21 +108,16 @@ ${appliedPromo ? `🏷️ خصم (${appliedPromo}): -${discountAmount.toFixed(2)
 🏛️ ضريبة (16%): ${taxAmount.toFixed(2)} د.أ
 
 💰 *الإجمالي النهائي:* ${total.toFixed(2)} د.أ
-            
+        
 يرجى تأكيد الاستلام والتجهيز.`;
 
-            const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-            
-            // Fix for iOS: Use window.location.href instead of window.open
-            window.location.href = url;
-        }
-
-    } catch (error) {
-        console.error(error);
-        alert("عذراً، حدث خطأ أثناء إرسال الطلب وحفظه في قاعدة البيانات. يرجى التحقق من اتصالك بالإنترنت والمحاولة مجدداً.");
-    } finally {
-        setLoading(false);
+        const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+        
+        // Fix for iOS: Use window.location.href instead of window.open
+        window.location.href = url;
     }
+
+    setLoading(false);
   };
 
   if (isOrdered) {

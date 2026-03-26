@@ -107,28 +107,10 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId, onPla
 
     if(subData.address && subData.phone && selectedPlanId && subData.deliverySlot && selectedPlan) {
         const finalPrice = Math.max(0, selectedPlan.price - discount);
-        try {
-            // Save to DB
-            await dataService.saveSubscription({
-                id: '',
-                status: 'active',
-                duration: selectedPlan.durationLabel,
-                deliverySlot: subData.deliverySlot,
-                address: subData.address,
-                phone: subData.phone,
-                notes: subData.notes,
-                date: new Date().toISOString(),
-                planTitle: selectedPlan.title,
-                pricePaid: finalPrice,
-                mealsPerDay: 1,
-                totalMeals: selectedPlan.durationLabel.includes('Monthly') ? 30 : 7,
-                deliveredCount: 0,
-                postponedCount: 0
-            } as SubscriptionModel);
-
-            // WhatsApp Integration
-            const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '962788078118';
-            const message = `مرحباً Uncle Healthy، أود الاشتراك في باقة: ${selectedPlan.title}
+        
+        // WhatsApp Integration
+        const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '962788078118';
+        const message = `مرحباً Uncle Healthy، أود الاشتراك في باقة: ${selectedPlan.title}
 التفاصيل:
 - العنوان: ${subData.address}
 - الهاتف: ${subData.phone}
@@ -137,20 +119,16 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId, onPla
 - ملاحظات: ${subData.notes || 'لا يوجد'}
 - الكود المستخدم: ${appliedPromo || 'لا يوجد'}`;
 
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
-            
-            window.open(whatsappUrl, '_blank');
-            
-            alert('تم استلام طلب الاشتراك بنجاح! سيتم توجيهك للواتساب لتأكيد الطلب.');
-            setStep(1);
-            setSelectedPlanId(null);
-            setSubData({ deliverySlot: DeliverySlot.MORNING, address: '', phone: '', notes: '' });
-            if (onClearInitialPlan) onClearInitialPlan();
-        } catch (error) {
-            console.error(error);
-            alert("عذراً، حدث خطأ أثناء حفظ الاشتراك.");
-        }
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+        
+        window.open(whatsappUrl, '_blank');
+        
+        alert('تم تجهيز طلب الاشتراك! سيتم توجيهك للواتساب لإتمام العملية.');
+        setStep(1);
+        setSelectedPlanId(null);
+        setSubData({ deliverySlot: DeliverySlot.MORNING, address: '', phone: '', notes: '' });
+        if (onClearInitialPlan) onClearInitialPlan();
     }
     setLoading(false);
   };
