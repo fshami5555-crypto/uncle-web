@@ -109,7 +109,7 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId, onPla
         const finalPrice = Math.max(0, selectedPlan.price - discount);
         
         // WhatsApp Integration
-        const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '962788078118';
+        const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '';
         const message = `مرحباً Uncle Healthy، أود الاشتراك في باقة: ${selectedPlan.title}
 التفاصيل:
 - العنوان: ${subData.address}

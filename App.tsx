@@ -73,11 +73,14 @@ const App: React.FC = () => {
   // Fetch content on mount and Track Visit
   useEffect(() => {
     const init = async () => {
+      try {
         await dataService.testConnection();
         const c = await dataService.getContent();
         setContent(c);
-        // Log visit
         dataService.logVisit();
+      } catch (error) {
+        console.error('Failed to initialize data service:', error);
+      }
     };
     init();
   }, []);
@@ -85,6 +88,7 @@ const App: React.FC = () => {
   // Handle Deep Linking (URL Query Params) on Mount and Popstate
   useEffect(() => {
       const handleDeepLinks = async () => {
+        try {
           const params = new URLSearchParams(window.location.search);
           const mealId = params.get('mealId');
           const planId = params.get('planId');
@@ -119,10 +123,13 @@ const App: React.FC = () => {
           } else if (viewParam) {
               setCurrentView(viewParam);
           }
-          
+
           if (!mealId && !planId) {
             resetMetaTags();
           }
+        } catch (error) {
+          console.error('Deep link handling failed:', error);
+        }
       };
 
       handleDeepLinks();
