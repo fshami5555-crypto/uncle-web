@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Subscription as SubscriptionModel, DeliverySlot, SubscriptionPlan } from '../types';
 import { dataService } from '../services/dataService';
-import { Check, Clock, MapPin, Truck, Tag, Edit3, Phone, Share2, ChevronRight, ChevronLeft, MessageCircle } from 'lucide-react';
+import { Check, Clock, MapPin, Truck, Tag, Edit3, Phone, Share2, MessageCircle } from 'lucide-react';
 import { OptimizedImage } from './OptimizedImage';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { MealTable } from './MealTable';
 
 interface SubscriptionProps {
@@ -18,7 +18,6 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId, onPla
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [carouselIndex, setCarouselIndex] = useState(0);
   
   const [subData, setSubData] = useState<Partial<SubscriptionModel>>({
     deliverySlot: DeliverySlot.MORNING,
@@ -110,14 +109,18 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId, onPla
         
         // WhatsApp Integration
         const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '962788078118';
-        const message = `مرحباً Uncle Healthy، أود الاشتراك في باقة: ${selectedPlan.title}
-التفاصيل:
-- العنوان: ${subData.address}
-- الهاتف: ${subData.phone}
-- وقت التوصيل: ${subData.deliverySlot === DeliverySlot.MORNING ? 'صباحي' : 'مسائي'}
-- السعر: ${finalPrice.toFixed(2)} د.أ
-- ملاحظات: ${subData.notes || 'لا يوجد'}
-- الكود المستخدم: ${appliedPromo || 'لا يوجد'}`;
+        const message = `مرحباً Uncle Healthy، أود الاشتراك في:
+📋 الباقة: ${selectedPlan.title}
+💰 السعر: ${finalPrice.toFixed(2)} د.أ
+
+📍 العنوان: ${subData.address}
+📞 الهاتف: ${subData.phone}
+🕐 وقت التوصيل: ${subData.deliverySlot === DeliverySlot.MORNING ? 'صباحي (10:00 - 12:00)' : 'مسائي (15:00 - 17:00)'}
+📝 ملاحظات: ${subData.notes || 'لا يوجد'}
+🎟️ كود الخصم: ${appliedPromo || 'لا يوجد'}
+
+محتويات الباقة:
+${selectedPlan.features.map(f => `• ${f}`).join('\n')}`;
 
         const encodedMessage = encodeURIComponent(message);
         const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
@@ -131,14 +134,6 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId, onPla
         if (onClearInitialPlan) onClearInitialPlan();
     }
     setLoading(false);
-  };
-
-  const nextPlan = () => {
-    setCarouselIndex((prev) => (prev + 1) % plans.length);
-  };
-
-  const prevPlan = () => {
-    setCarouselIndex((prev) => (prev - 1 + plans.length) % plans.length);
   };
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
@@ -165,99 +160,66 @@ export const Subscription: React.FC<SubscriptionProps> = ({ initialPlanId, onPla
 
       {step === 1 && (
         <div className="space-y-16">
-          {/* Carousel Section */}
-          <div className="relative overflow-hidden py-8">
-            <div className="flex items-center justify-center gap-4 md:gap-8">
-              <button 
-                onClick={prevPlan}
-                className="hidden md:flex bg-white shadow-lg p-4 rounded-full text-uh-dark hover:bg-uh-green hover:text-white transition-all z-10"
+          {/* Plans Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            {plans.map((plan, index) => (
+              <motion.div
+                key={plan.id}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`bg-white rounded-[2rem] shadow-xl border-2 transition-all duration-300 relative overflow-hidden group cursor-pointer flex flex-col ${plan.isPopular ? 'border-uh-green scale-[1.02] shadow-uh-green/20' : 'border-transparent hover:border-uh-green'}`}
+                onClick={() => handleSelectPlan(plan.id)}
               >
-                <ChevronRight size={24} />
-              </button>
+                {plan.image && (
+                  <div className="h-48 overflow-hidden relative">
+                    <OptimizedImage
+                      src={plan.image}
+                      alt={plan.title}
+                      width={600}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                    <button
+                      onClick={(e) => handleSharePlan(e, plan.id)}
+                      className="absolute top-3 left-3 bg-white/90 p-2 rounded-full hover:bg-white text-uh-dark shadow-lg z-20 transition active:scale-90"
+                      title="مشاركة الباقة"
+                    >
+                      {copiedId === plan.id ? <Check size={16} className="text-green-600"/> : <Share2 size={16} />}
+                    </button>
+                  </div>
+                )}
 
-              <div className="w-full max-w-4xl overflow-hidden">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={carouselIndex}
-                    initial={{ opacity: 0, x: 100 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -100 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="grid md:grid-cols-1 gap-8"
-                  >
-                    {plans.length > 0 && (
-                      <div className="bg-white rounded-[2.5rem] shadow-2xl border-2 border-transparent hover:border-uh-green transition-all duration-500 relative overflow-hidden group flex flex-col md:flex-row max-w-3xl mx-auto">
-                        {plans[carouselIndex].image && (
-                          <div className="md:w-1/2 h-64 md:h-auto overflow-hidden relative">
-                              <OptimizedImage 
-                                src={plans[carouselIndex].image} 
-                                alt={plans[carouselIndex].title} 
-                                width={800} 
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                              />
-                              <button 
-                                onClick={(e) => handleSharePlan(e, plans[carouselIndex].id)}
-                                className="absolute top-4 left-4 bg-white/90 p-3 rounded-full hover:bg-white text-uh-dark shadow-lg z-20 transition active:scale-90"
-                                title="مشاركة الباقة"
-                              >
-                                  {copiedId === plans[carouselIndex].id ? <Check size={20} className="text-green-600"/> : <Share2 size={20} />}
-                              </button>
-                          </div>
-                        )}
-                        
-                        {plans[carouselIndex].isPopular && (
-                            <div className="absolute top-0 right-0 bg-uh-gold text-uh-dark px-6 py-2 rounded-bl-3xl text-sm font-bold shadow-md z-10">الأكثر طلباً</div>
-                        )}
-                        
-                        <div className="p-10 flex flex-col flex-1 md:w-1/2">
-                          <h3 className="text-3xl font-bold text-uh-dark mb-2">{plans[carouselIndex].title}</h3>
-                          <div className="text-5xl font-brand text-uh-greenDark mb-8">
-                            {plans[carouselIndex].price} 
-                            <span className="text-lg text-gray-400 mr-2">د.أ</span> 
-                            <span className="text-sm text-gray-400 font-sans">/ {plans[carouselIndex].durationLabel}</span>
-                          </div>
-                          
-                          <ul className="space-y-4 mb-10 flex-1">
-                              {plans[carouselIndex].features.map((f, i) => (
-                                  <li key={i} className="flex items-center gap-4 text-gray-600 text-lg">
-                                      <div className="bg-uh-green/10 p-1 rounded-full">
-                                        <Check className="text-uh-green" size={18} />
-                                      </div>
-                                      {f}
-                                  </li>
-                              ))}
-                          </ul>
-                          <button 
-                              onClick={() => handleSelectPlan(plans[carouselIndex].id)}
-                              className="w-full bg-uh-dark text-white py-4 rounded-2xl font-bold text-xl hover:bg-black transition-all shadow-xl hover:shadow-uh-green/20 active:scale-95"
-                          >
-                              اختيار الباقة
-                          </button>
+                {plan.isPopular && (
+                  <div className="absolute top-0 right-0 bg-uh-gold text-uh-dark px-4 py-1 rounded-bl-2xl text-xs font-bold shadow-md z-10">الأكثر طلباً</div>
+                )}
+
+                <div className="p-6 flex flex-col flex-1">
+                  <h3 className="text-xl font-bold text-uh-dark mb-2">{plan.title}</h3>
+                  <div className="text-3xl font-brand text-uh-greenDark mb-4">
+                    {plan.price}
+                    <span className="text-sm text-gray-400 mr-1">د.أ</span>
+                    <span className="text-xs text-gray-400 font-sans">/ {plan.durationLabel}</span>
+                  </div>
+
+                  <ul className="space-y-2 mb-6 flex-1">
+                    {plan.features.map((f, i) => (
+                      <li key={i} className="flex items-start gap-2 text-gray-600 text-sm">
+                        <div className="bg-uh-green/10 p-0.5 rounded-full mt-1 shrink-0">
+                          <Check className="text-uh-green" size={14} />
                         </div>
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-
-              <button 
-                onClick={nextPlan}
-                className="hidden md:flex bg-white shadow-lg p-4 rounded-full text-uh-dark hover:bg-uh-green hover:text-white transition-all z-10"
-              >
-                <ChevronLeft size={24} />
-              </button>
-            </div>
-
-            {/* Mobile Controls */}
-            <div className="flex justify-center gap-4 mt-8 md:hidden">
-              <button onClick={prevPlan} className="bg-white shadow-md p-3 rounded-full"><ChevronRight /></button>
-              <div className="flex items-center gap-2">
-                {plans.map((_, i) => (
-                  <div key={i} className={`h-2 rounded-full transition-all ${carouselIndex === i ? 'w-8 bg-uh-green' : 'w-2 bg-gray-300'}`} />
-                ))}
-              </div>
-              <button onClick={nextPlan} className="bg-white shadow-md p-3 rounded-full"><ChevronLeft /></button>
-            </div>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleSelectPlan(plan.id); }}
+                    className="w-full bg-uh-dark text-white py-3 rounded-xl font-bold text-base hover:bg-black transition-all shadow-lg hover:shadow-uh-green/20 active:scale-95"
+                  >
+                    اشترك الآن
+                  </button>
+                </div>
+              </motion.div>
+            ))}
           </div>
 
           {/* Meal Table Section */}
