@@ -65,9 +65,7 @@ export const dataService = {
     try {
       await getDocFromServer(doc(db, 'test', 'connection'));
     } catch (error) {
-      if (error instanceof Error && error.message.includes('the client is offline')) {
-        console.error("Please check your Firebase configuration.");
-      }
+      console.error("Firebase connection test failed:", error instanceof Error ? error.message : error);
     }
   },
 
